@@ -193,3 +193,32 @@ Docs: `11-error-and-result-model.md` (ERR-01), `12-security-and-session.md` (SEC
 - **Build logic:** convention plugins explicitly deferred (`18-build-logic-and-dependencies.md`) — 3 Android modules' shared boilerplate doesn't yet outweigh maintaining a `build-logic` included build (anti-overengineering).
 
 Docs: `17-testing.md` (TST-01/02), `18-build-logic-and-dependencies.md` (BLD-01), `19-ci-release-quality-gates.md` (CI-01), `21-coding-rules.md` (CODE-01, plus an index of rules defined elsewhere).
+
+## Phase J — Architecture documentation finalization
+**Model:** Haiku 4.5 (consistency-checker role, dispatched as a subagent).
+**Status:** Gate J passed.
+
+Ran a full consistency pass over every file under `architecture/` (Phases B–I, ~25 documents): internal markdown links, rule-ID collisions across every prefix in use (50 unique IDs — INV, DEP, STR, UI, DI, DS, ERR, SEC, LC, THR, DAT, OBS, CFG, CI, BLD, TST, CODE, KD, DEC, NAV), module/namespace claims in `03-project-structure.md`/`02-layers-and-dependencies.md` against `settings.gradle.kts`/`app/build.gradle.kts`, a spot-check that every "not implemented" claim (navigation, Room, WorkManager, etc.) is still true against real source (`grep androidx.navigation`/`androidx.work`/`androidx.room` → zero hits, as claimed), `00-index.md`'s status table against files actually on disk, and every `22-known-deviations.md`/`23-decision-log.md` entry's cited paths.
+
+**Result: all six checks PASS, zero issues found** — no doc edits were needed as a result of this pass.
+
+## Phase K — Critical audit (conditional)
+**Status:** Skipped, with justification (target per `plan/CLAUDE_IMPLEMENTATION_PLAN.md` §1.1 is 0-1 Opus escalations).
+
+None of the six escalation conditions fired during Phases F–J: no unresolved rule conflict, no public/core API break across modules, no security/lifecycle/concurrency decision with materially different safe designs, no new dependency-direction violation, no approach that failed validation twice (the AGP9/KSP and deprecated-`hiltViewModel` issues were each single fix-and-move-on, not repeated failures), no irreversible migration. Opus was not invoked.
+
+## Consolidated verification (Phases F–K)
+Per the earlier direction to batch code generation and defer full verification, this is the actual, executed result — not a projection:
+
+```
+./gradlew testDebugUnitTest assembleDebug   -> BUILD SUCCESSFUL (117 tasks, 62 executed)
+./gradlew lintDebug                          -> BUILD SUCCESSFUL (12 warnings, 0 errors)
+```
+
+Unit test totals across all modules: **7/7 passing, 0 failures, 0 errors** (`ExampleUnitTest` ×1, `GreetingViewModelTest` ×6 — the 6th being the new "restart without SavedStateHandle falls back to the persisted preference" test from Phase G). `:ui:designsystem` and `:data:preferences` have no unit test sources yet (`testDebugUnitTest NO-SOURCE` — honestly nothing to test there today; both are thin wrappers). All four modules (`:app`, `:ui:designsystem`, `:runtime:concurrency`, `:data:preferences`) assembled successfully together for the first time.
+
+**Known gap, stated plainly:** `GreetingScreenTest` (Compose UI test, `app/src/androidTest/`) compiles but was not executed — no emulator/device is available in this environment, and CI (`19-ci-release-quality-gates.md`) doesn't run `connectedAndroidTest` either. This is the one place "generate code, fix bugs later" left something genuinely unverified rather than just unpolished.
+
+Only one real build-time bug surfaced across F–K (the `:data:preferences` missing `javax.inject` dependency, Phase G) — everything else compiled/passed on the first consolidated run.
+
+Phase L (final validation + sanitized ZIP) was intentionally not started — it wasn't part of this batch.
