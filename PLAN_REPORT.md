@@ -55,3 +55,21 @@ No `architecture/` directory at repo root. `plan/architecture/*` remains seed/pl
 
 ### Deviation logged
 `rootProject.name` typo (stray `(`) — fixed directly during recon since it was a one-character build-metadata bug, not an architecture decision.
+
+---
+
+## Phase B — Invariants & dependency boundaries
+**Model:** Sonnet 5 direct (architecture-writer role) + Haiku subagent for Gate B (consistency-checker role).
+**Status:** Gate B passed.
+
+### Created
+- `architecture/README.md`, `00-index.md` (with a status table so an AI reader can tell "not built yet" from "forgotten"), `01-overview-and-invariants.md` (INV-01..10), `02-layers-and-dependencies.md` (DEP-01..05, target layer diagram from root `CLAUDE.md`), `03-project-structure.md` (STR-01/02, real current tree), `24-ai-reading-guide.md` (also documents the graphify-vs-rg search heuristic), `22-known-deviations.md` (KD-01, KD-02), `23-decision-log.md` (DEC-01, DEC-02).
+
+### Finding: namespace mismatch (KD-01 / DEC-01)
+Root `CLAUDE.md` stated primary namespace `com.dc.foundation`, but the real generated project uses `com.dc.android.foundation` everywhere (`app/build.gradle.kts`, every `package` declaration). Per `CLAUDE.md`'s own architecture-authority order, verified source outranks the summary doc. **Decision:** corrected `CLAUDE.md` to state the real namespace rather than renaming the codebase — logged as KD-01/DEC-01, not left as a silent fix.
+
+### Scope discipline
+Did not pre-create the other 19 seed docs (`04`-`21`, `07-design-system/*`, `10-data/*`, `15-observability/*`) — Phase B's explicit scope was 01/02/03 only. Each later phase creates its own docs when it actually builds that capability (DEC-02), matching the plan's anti-overengineering constraint applied to documentation itself.
+
+### Gate B — consistency check (Haiku subagent)
+Verified independently, all PASS: all 10 internal markdown links resolve; `settings.gradle.kts` really only includes `:app`; namespace claims match `app/build.gradle.kts` and every `package` declaration; Hilt/Room/Retrofit/WorkManager/Navigation/DataStore really absent from `libs.versions.toml`/`app/build.gradle.kts`; `MainActivity.kt` has zero infra imports; `CLAUDE.md` now states the corrected namespace; 22 rule IDs (INV/DEP/STR/KD/DEC) checked, zero collisions; `00-index.md` status table matches actual files on disk exactly.

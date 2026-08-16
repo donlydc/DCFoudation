@@ -5,7 +5,7 @@
 **Project:** DC Android Foundation  
 **Repository:** `dc-android-foundation`  
 **Brand:** `DC` = Donly Conan  
-**Primary namespace:** `com.dc.foundation`
+**Primary namespace:** `com.dc.android.foundation` (verified against `app/build.gradle.kts` and source; see `architecture/22-known-deviations.md` KD-01)
 
 This repository is a reusable Android foundation for future DC applications. It provides architecture, UI/design-system, platform, data, runtime, security, observability, testing, and build conventions that are intentionally business-neutral.
 
