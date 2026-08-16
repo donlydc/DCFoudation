@@ -46,6 +46,8 @@ dependencies {
     implementation(project(":data:network"))
     implementation(project(":data:database"))
     implementation(project(":observability"))
+    implementation(project(":platform:navigation"))
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.converter.kotlinx.serialization)

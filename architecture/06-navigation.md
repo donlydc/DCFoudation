@@ -6,22 +6,30 @@
 
 How the app moves between destinations, and how far the navigation engine is abstracted behind a contract.
 
-## Current implementation
+## Current implementation (Phase P)
 
-**Not implemented.** The app has exactly one destination (`GreetingRoute`), hosted directly by `MainActivity` (`DcTheme { GreetingRoute() }`) with no `NavHost`, no `androidx.navigation` dependency, and no destination/navigation contract. Per the anti-overengineering constraint (`plan/CLAUDE_IMPLEMENTATION_PLAN.md` §7 — "do not add a capability when the project has no current or near-term use case"), a navigation library is not added until a second destination actually exists to navigate to or from.
+The app has two peer top-level destinations — `GreetingRoute` and `ArticlesRoute` — hosted by a real `androidx.navigation` Compose `NavHost` built directly in `app/src/main/java/com/dc/android/foundation/MainActivity.kt`, with a `NavigationBar` letting the user switch between them. `:platform:navigation` (`Destination.kt`) defines a DC-owned, engine-neutral `sealed interface Destination` with `Destination.Greeting`/`Destination.Articles` as `@Serializable data object`s, used with Navigation-Compose's type-safe route API (`composable<Destination.Greeting>`).
 
-## Target direction (not yet built)
-
-When a second destination is added, the root `CLAUDE.md` target map's `platform/navigation` capability applies: a thin destination/navigation contract that hides the underlying navigation engine (`androidx.navigation` Compose or otherwise) from feature code, so features depend on a DC-owned contract rather than the engine directly. That contract will be designed against a real second screen, not speculatively now.
+There is deliberately **no** `Navigator`/`DcNavController` action-wrapper: the two destinations are peers that never navigate to one another — only `:app`'s `NavHost` ever calls real `androidx.navigation` APIs. Neither `GreetingRoute` nor `ArticlesRoute` changed signature; neither imports navigation of any kind. If a future feature needs to *trigger* navigation itself (not just be a destination), that is the trigger to add a thin navigation-action contract to `:platform:navigation` — not before.
 
 ## Rules
 
-**NAV-01 — Reserved.** No rule yet — nothing to enforce with a single hard-coded destination. Will be written against the first real multi-destination case instead of guessed in advance.
+### NAV-01 — Feature code does not depend on the navigation engine; only `:app` does
+
+**Rule:** No package under a feature (`app/.../greeting/**`, `app/.../articles/**`) or under any non-`:app` module imports `androidx.navigation.*`. Destinations are described only through `com.dc.android.foundation.platform.navigation.Destination` (or a future navigation-action contract in the same module). Only `:app`'s `MainActivity.kt` (the composition root and sole `NavHost` owner) depends on `androidx.navigation-compose` and builds/drives the real `NavController`.
+
+**Why:** Keeps features independently replaceable/testable and prevents a vendor navigation type from leaking into presentation/public contracts (DEP-02, DEP-04, INV-07).
+
+**Verification:** `grep -r "androidx.navigation" app/src/main/java/com/dc/android/foundation/{greeting,articles}` and across `ui/`, `runtime/`, `data/`, `security/`, `observability/`, `platform/permission`, `platform/device`, `platform/configuration` should be empty; only `app/src/main/java/com/dc/android/foundation/MainActivity.kt` and `:platform:navigation` (via `kotlinx.serialization`, not `androidx.navigation`, in `Destination.kt`) reference navigation types. `platform/navigation/build.gradle.kts` has no `androidx.navigation.compose` dependency.
+
+**Exceptions:** None.
 
 ## Testing / validation
 
-N/A yet.
+No dedicated navigation test yet — `Destination` is a plain sealed type with no behavior to unit test beyond equality, which `data object` gives for free. Revisit if a navigation-action contract is later added with real logic.
 
 ## Related documents
 
 - [`05-presentation-udf.md`](05-presentation-udf.md)
+- [`02-layers-and-dependencies.md`](02-layers-and-dependencies.md) (DEP-02, DEP-04)
+- [`01-overview-and-invariants.md`](01-overview-and-invariants.md) (INV-07)
