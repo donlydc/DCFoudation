@@ -8,11 +8,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dc.android.foundation.designsystem.components.DcText
 import com.dc.android.foundation.designsystem.theme.DcTheme
+import com.dc.android.foundation.greeting.GreetingViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,8 +26,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             DcTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    val viewModel: GreetingViewModel = hiltViewModel()
+                    val greeting by viewModel.greeting.collectAsStateWithLifecycle()
                     Greeting(
-                        name = "Android",
+                        text = greeting,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -31,9 +39,9 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
+fun Greeting(text: String, modifier: Modifier = Modifier) {
     DcText(
-        text = "Hello $name!",
+        text = text,
         modifier = modifier
     )
 }
@@ -42,6 +50,6 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Composable
 fun GreetingPreview() {
     DcTheme {
-        Greeting("Android")
+        Greeting("Hello Android!")
     }
 }

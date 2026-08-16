@@ -31,3 +31,13 @@ Durable decisions with date, context, decision, alternatives, consequences, affe
 **Consequences:** Keeps `architecture/` honest (INV-10) and avoids the plan's own anti-overengineering constraint (§7) applied to documentation itself — no doc describes an unimplemented capability as if it were designed.
 
 **Affected:** `architecture/00-index.md`, all future phase docs.
+
+### DEC-03 — 2026-08-16 — Look up exact library versions via Maven metadata instead of guessing
+
+**Context:** Phase D needed Hilt/KSP/androidx.hilt versions. An initial `WebSearch`/`WebFetch` pass produced inconsistent numbers (2.56.2 vs 2.59.2 vs 2.60.1) — search-engine-summarized results were not reliable for exact version pins.
+
+**Decision:** For any dependency version that must be exact (build-breaking if wrong), fetch the authoritative `maven-metadata.xml` directly (`repo1.maven.org` via `curl`, or `dl.google.com/dl/android/maven2/.../group-index.xml` for AndroidX/Google artifacts) rather than trusting a search summary.
+
+**Consequences:** Slower than trusting the first search result, but the Gate C/D builds only needed one retry each (both for real compatibility issues, not version mistakes) once this was adopted.
+
+**Affected:** `gradle/libs.versions.toml` (hilt, ksp, androidxHiltCompose), any future phase adding a new dependency.

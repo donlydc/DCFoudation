@@ -97,3 +97,28 @@ Deleted `app/.../ui/theme/{Color,Type,Theme}.kt` (superseded). `MainActivity.kt`
 ### Gate C verification
 - `./gradlew :ui:designsystem:compileDebugKotlin :app:compileDebugKotlin` → **BUILD SUCCESSFUL** (had to fix the plugin-resolution issue above first).
 - Hard-coded value scan: `grep '0xFF|\.dp\b|RoundedCornerShape\('` across `app/src` → zero matches outside `ui/designsystem`.
+
+---
+
+## Phase D — Hilt dependency injection
+**Model:** Sonnet 5 direct (implementation-worker role). Used live `WebSearch`/`WebFetch`/`curl` against Maven Central and Google's Maven repo to pin exact versions instead of guessing (DEC-03) — search-summarized version numbers were inconsistent (2.56.2 / 2.59.2 / 2.60.1 for the same artifact across different queries) until verified against raw `maven-metadata.xml`.
+
+### Versions pinned (verified against `maven-metadata.xml`, not guessed)
+`com.google.dagger:hilt-android`/`hilt-compiler` **2.60.1**, KSP Gradle plugin **2.2.10-2.0.2** (exact match for this project's Kotlin `2.2.10`), `androidx.hilt:hilt-lifecycle-viewmodel-compose` **1.4.0** (the leaner, non-deprecated `hiltViewModel()` source — the older `androidx.hilt:hilt-navigation-compose` one is now deprecated and would have pulled in Navigation before Phase E needs it).
+
+### Wiring
+- `DcApplication` (`@HiltAndroidApp`), registered in `AndroidManifest.xml`.
+- `MainActivity` → `@AndroidEntryPoint` (field injection only where Android construction requires it, per DI-01).
+- New `greeting/` package: `GreetingProvider`/`DefaultGreetingProvider` (`@Inject constructor()` — deliberately trivial, not a fake repository), `GreetingModule` (`@Binds`, colocated per DI-02, not a shared `AppModule`), `GreetingViewModel` (`@HiltViewModel`, minimal `StateFlow<String>` — Phase E will upgrade this to the full UDF contract without touching the DI wiring).
+- `MainActivity` obtains it via `hiltViewModel()` + `collectAsStateWithLifecycle()`.
+
+### Build issues hit and fixed (both real compatibility problems, not version mistakes)
+1. **AGP 9 rejects KSP's classic source-set registration** (`Using kotlin.sourceSets DSL... not allowed with built-in Kotlin`) — fixed with `android.disallowKotlinSourceSets=false` in `gradle.properties` (the flag AGP's own error message names), logged as KD-03 since it's a tooling-compat flag, not an architecture exception.
+2. **Missing `androidx.compose.runtime.getValue` import** broke the `by viewModel.greeting.collectAsStateWithLifecycle()` delegate — added the import.
+3. Initially used the deprecated `androidx.hilt.navigation.compose.hiltViewModel()`; switched to `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()` (no Navigation dependency, not deprecated).
+
+### Gate D verification
+`./gradlew :app:assembleDebug` → **BUILD SUCCESSFUL**, all Hilt tasks ran (`kspDebugKotlin`, `hiltCollectClassesDebug`, `hiltAggregateDepsDebug`, `hiltJavaCompileDebug`) with zero warnings on the final run — real proof the DI graph resolves, not just a doc claim. One `@Binds` exists; no duplicate bindings possible. `Greeting()` (the reusable composable) still takes a plain `String`, not a DI type — DI-03 holds.
+
+### Docs
+`architecture/08-dependency-injection-hilt.md` (DI-01..DI-04). `22-known-deviations.md` KD-02 marked resolved (module boundary now exists to check), KD-03 added. `23-decision-log.md` DEC-03 added.

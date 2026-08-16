@@ -30,4 +30,16 @@ Explicit intentional/current violations or non-yet-satisfied states of architect
 
 **Risk:** None currently — there is nothing to violate with a single module.
 
-**Owner/exit condition:** Closes automatically as modules are introduced by Phase C onward; each new module must restate STR-01's one-line responsibility in `03-project-structure.md`.
+**Status:** **Resolved in Phase C** — `:ui:designsystem` now exists (`settings.gradle.kts`: `include(":app")`, `include(":ui:designsystem")`), and `:app` depends on it one-directionally (`implementation(project(":ui:designsystem"))`). DEP-01/04 are now verifiable via `./gradlew :app:dependencies`. Kept here as history; not an open deviation.
+
+### KD-03 — `android.disallowKotlinSourceSets=false` required for KSP on AGP 9
+
+**Rule affected:** none (build-tooling compatibility, not an architecture rule)
+
+**Evidence:** `gradle.properties`. `./gradlew :app:assembleDebug` failed configuration with `Using kotlin.sourceSets DSL to add Kotlin sources is not allowed with built-in Kotlin` before this flag was added.
+
+**Reason:** AGP 9.3.1's new built-in-Kotlin compilation pipeline rejects the classic `kotlin.sourceSets` DSL. The KSP Gradle plugin (`2.2.10-2.0.2`, the version matching this project's Kotlin `2.2.10`) still registers its generated-sources directory through that classic DSL — it has not yet published an `android.sourceSets`-based update. `android.disallowKotlinSourceSets=false` is the flag Android's own error message names as the fix, not a project-invented workaround.
+
+**Risk:** Low — a build-tooling compatibility flag, not an architecture/behavior change. Revisit when KSP ships an AGP-9-native release.
+
+**Owner/exit condition:** Remove the flag (and this entry) once a KSP release adds `android.sourceSets` support and the build still succeeds without it.
