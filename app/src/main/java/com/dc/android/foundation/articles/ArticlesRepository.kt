@@ -3,6 +3,7 @@ package com.dc.android.foundation.articles
 import com.dc.android.foundation.data.database.ArticleDao
 import com.dc.android.foundation.data.database.ArticleEntity
 import com.dc.android.foundation.data.network.NetworkResult
+import com.dc.android.foundation.observability.CrashReporter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -30,7 +31,8 @@ data class Article(
  */
 class ArticlesRepository @Inject constructor(
     private val networkDataSource: ArticlesNetworkDataSource,
-    private val articleDao: ArticleDao
+    private val articleDao: ArticleDao,
+    private val crashReporter: CrashReporter
 ) {
     fun observeArticles(): Flow<List<Article>> =
         articleDao.observeArticles().map { entities -> entities.map { it.toArticle() } }
@@ -42,7 +44,13 @@ class ArticlesRepository @Inject constructor(
                 articleDao.upsertAll(result.data.map { it.toEntity() })
                 true
             }
-            is NetworkResult.Failure -> false
+            is NetworkResult.Failure -> {
+                // Already-existing ERR-01 error boundary (NetworkResult.Failure) — recording the
+                // exception here is an observability side-effect only, it does not change the
+                // boundary's contract (refresh() still just returns false).
+                crashReporter.recordException(result.throwable)
+                false
+            }
         }
 }
 

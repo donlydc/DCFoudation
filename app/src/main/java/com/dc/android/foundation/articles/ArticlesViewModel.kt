@@ -3,6 +3,7 @@ package com.dc.android.foundation.articles
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dc.android.foundation.observability.AnalyticsTracker
 import com.dc.android.foundation.observability.Logger
 import com.dc.android.foundation.runtime.concurrency.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,7 @@ class ArticlesViewModel @Inject constructor(
     private val articlesRepository: ArticlesRepository,
     private val dispatcherProvider: DispatcherProvider,
     private val logger: Logger,
+    private val analyticsTracker: AnalyticsTracker,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -70,6 +72,9 @@ class ArticlesViewModel @Inject constructor(
             }
             // Count/status only — never log article title/body content (SEC-01).
             logger.d(LOG_TAG, "refresh: succeeded=$succeeded")
+            if (succeeded) {
+                analyticsTracker.trackEvent(name = "articles_refreshed")
+            }
             _uiState.update { it.copy(isRefreshing = false, isShowingStaleData = !succeeded) }
             _effects.send(
                 if (succeeded) {

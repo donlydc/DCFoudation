@@ -49,6 +49,7 @@ dependencies {
     implementation(project(":platform:navigation"))
     implementation(project(":platform:permission"))
     implementation(project(":runtime:background"))
+    implementation(project(":security"))
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
