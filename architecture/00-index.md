@@ -7,15 +7,19 @@
 
 ## Status
 
-This tree is populated phase-by-phase per [`../plan/CLAUDE_IMPLEMENTATION_PLAN.md`](../plan/CLAUDE_IMPLEMENTATION_PLAN.md). As of Phase D, only the documents below exist. A topic-routing row pointing at a not-yet-created file means that phase hasn't run yet — check [`../PLAN_REPORT.md`](../PLAN_REPORT.md) for current progress, do not invent the content.
+This tree is populated phase-by-phase per [`../plan/CLAUDE_IMPLEMENTATION_PLAN.md`](../plan/CLAUDE_IMPLEMENTATION_PLAN.md). As of Phase E, only the documents below exist. A topic-routing row pointing at a not-yet-created file means that phase hasn't run yet — check [`../PLAN_REPORT.md`](../PLAN_REPORT.md) for current progress, do not invent the content.
 
 | Document | Status |
 |---|---|
 | `01-overview-and-invariants.md` | done (Phase B) |
 | `02-layers-and-dependencies.md` | done (Phase B) |
 | `03-project-structure.md` | done (Phase B) |
+| `04-app-bootstrap-and-lifecycle.md` | done (Phase E) |
+| `05-presentation-udf.md` | done (Phase E) |
+| `06-navigation.md` | done (Phase E, marked not-implemented) |
 | `07-design-system/*` (9 files) | done (Phase C) |
 | `08-dependency-injection-hilt.md` | done (Phase D) |
+| `20-feature-template.md` | done (Phase E) |
 | `22-known-deviations.md` | living document, updated every phase |
 | `23-decision-log.md` | living document, updated every phase |
 | `24-ai-reading-guide.md` | done (Phase B) |

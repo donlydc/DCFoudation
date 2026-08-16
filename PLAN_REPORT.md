@@ -122,3 +122,25 @@ Deleted `app/.../ui/theme/{Color,Type,Theme}.kt` (superseded). `MainActivity.kt`
 
 ### Docs
 `architecture/08-dependency-injection-hilt.md` (DI-01..DI-04). `22-known-deviations.md` KD-02 marked resolved (module boundary now exists to check), KD-03 added. `23-decision-log.md` DEC-03 added.
+
+---
+
+## Phase E — Presentation, navigation, lifecycle
+**Model:** Sonnet 5 direct (implementation-worker role).
+**Status:** Gate E passed — real build + 5/5 passing unit tests, not just a doc claim.
+
+### `greeting` becomes the canonical UDF feature
+Formalized the Phase D throwaway ViewModel into the full contract, all in `app/.../greeting/`: `GreetingUiState` (data class), `GreetingUiAction` (sealed interface, `Refresh`), `GreetingUiEffect` (sealed interface, `ShowMessage` — a real one-shot event, not just plumbing: it drives a Snackbar), `GreetingViewModel` (`@HiltViewModel`, `StateFlow<GreetingUiState>` + `Channel<GreetingUiEffect>` + `onAction`), `GreetingScreen` (stateless, previewable, zero DI import), `GreetingRoute` (stateful — the only place resolving `hiltViewModel()`, owns its `Scaffold`/`SnackbarHost`). `MainActivity` is now just `DcTheme { GreetingRoute() }`.
+
+### Process death handled for real
+`GreetingViewModel` takes an injected `SavedStateHandle` and stores `nameIndex` through it instead of a plain field — proven by a test that constructs two ViewModel instances over the same handle to simulate restoration.
+
+### Navigation: honestly marked not implemented
+`architecture/06-navigation.md` states plainly that no `androidx.navigation` dependency exists — one destination, no NavHost, nothing to abstract yet (anti-overengineering constraint), rather than inventing a destination-contract nobody uses.
+
+### Docs
+`architecture/04-app-bootstrap-and-lifecycle.md` (LC-01), `05-presentation-udf.md` (UI-01..03), `06-navigation.md` (explicitly not-implemented), `20-feature-template.md` (the file-by-file template generalized from `greeting/`).
+
+### Gate E verification
+- `./gradlew :app:assembleDebug :app:testDebugUnitTest` → **BUILD SUCCESSFUL**.
+- `GreetingViewModelTest` — **5/5 tests pass** (JUnit XML report: `tests="5" failures="0" errors="0"`): initial state, single Refresh transition, 3x-Refresh cycle-back, effect emission (collected off a background `launch` + `toList`), SavedStateHandle restoration. Uses a `MainDispatcherRule` (`app/src/test/.../MainDispatcherRule.kt`) to make `viewModelScope` deterministic under `runTest`.
