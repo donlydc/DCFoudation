@@ -6,10 +6,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.dc.android.foundation.designsystem.components.DcButton
 import com.dc.android.foundation.designsystem.components.DcText
 import com.dc.android.foundation.designsystem.theme.DcTheme
+import com.dc.android.foundation.designsystem.tokens.SpacingTokens
 
 /**
  * Stateless — receives [state], sends [onAction]. No ViewModel/DI import here (DI-03,
@@ -22,8 +22,8 @@ fun GreetingScreen(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = modifier.padding(SpacingTokens.Medium),
+        verticalArrangement = Arrangement.spacedBy(SpacingTokens.Small)
     ) {
         DcText(text = state.message)
         DcButton(
