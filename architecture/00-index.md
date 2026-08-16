@@ -7,7 +7,7 @@
 
 ## Status
 
-This tree is populated phase-by-phase per [`../plan/CLAUDE_IMPLEMENTATION_PLAN.md`](../plan/CLAUDE_IMPLEMENTATION_PLAN.md). As of Phase E, only the documents below exist. A topic-routing row pointing at a not-yet-created file means that phase hasn't run yet — check [`../PLAN_REPORT.md`](../PLAN_REPORT.md) for current progress, do not invent the content.
+This tree is populated phase-by-phase per [`../plan/CLAUDE_IMPLEMENTATION_PLAN.md`](../plan/CLAUDE_IMPLEMENTATION_PLAN.md). As of Phase G, only the documents below exist. A topic-routing row pointing at a not-yet-created file means that phase hasn't run yet — check [`../PLAN_REPORT.md`](../PLAN_REPORT.md) for current progress, do not invent the content.
 
 | Document | Status |
 |---|---|
@@ -19,6 +19,9 @@ This tree is populated phase-by-phase per [`../plan/CLAUDE_IMPLEMENTATION_PLAN.m
 | `06-navigation.md` | done (Phase E, marked not-implemented) |
 | `07-design-system/*` (9 files) | done (Phase C) |
 | `08-dependency-injection-hilt.md` | done (Phase D) |
+| `09-concurrency-and-threading.md` | done (Phase F) |
+| `10-data/*` (7 files) | done (Phase G; network/persistence-room/cache-and-offline marked not-implemented) |
+| `14-background-work.md` | done (Phase F, marked not-implemented) |
 | `20-feature-template.md` | done (Phase E) |
 | `22-known-deviations.md` | living document, updated every phase |
 | `23-decision-log.md` | living document, updated every phase |

@@ -144,3 +144,29 @@ Formalized the Phase D throwaway ViewModel into the full contract, all in `app/.
 ### Gate E verification
 - `./gradlew :app:assembleDebug :app:testDebugUnitTest` → **BUILD SUCCESSFUL**.
 - `GreetingViewModelTest` — **5/5 tests pass** (JUnit XML report: `tests="5" failures="0" errors="0"`): initial state, single Refresh transition, 3x-Refresh cycle-back, effect emission (collected off a background `launch` + `toList`), SavedStateHandle restoration. Uses a `MainDispatcherRule` (`app/src/test/.../MainDispatcherRule.kt`) to make `viewModelScope` deterministic under `runTest`.
+
+---
+
+## Phases F–K — batched for speed, full gate deferred to a consolidated pass
+Per explicit user direction ("tập trung vào việc sinh code, có thể fix bug sau" — focus on generating code, bugs can be fixed after), phases F through K below were code-and-doc-written back to back with only a fast `compileDebugKotlin`/`compileDebugUnitTestKotlin` check after each pair, instead of a full `assembleDebug`+`testDebugUnitTest` gate per phase as in A–E. A full build + full test run happens once at the end of this batch, and whatever it finds gets fixed then — see the "Consolidated verification" entry below for the real result.
+
+## Phase F — Concurrency & background execution
+**Model:** Sonnet 5 direct (implementation-worker role).
+**Status:** Code complete, compiles (`:app:compileDebugKotlin`/`compileDebugUnitTestKotlin` green). Full gate pending consolidated pass.
+
+New module `:runtime:concurrency` (plain Kotlin/JVM, no Android/DI dependency — deliberately framework-agnostic per INV-03): `DispatcherProvider` (interface), `DefaultDispatcherProvider` (real dispatchers), `FakeDispatcherProvider` (single dispatcher for all four, for tests). `:app`'s `di/ConcurrencyModule.kt` supplies the Hilt binding (the library module itself has zero Hilt dependency — binding lives at the composition root). `GreetingViewModel` now runs its `withContext(dispatcherProvider.default)` around `greetingProvider.greetingFor(...)` instead of touching `Dispatchers` directly. `14-background-work.md` states WorkManager is not implemented — no persistent-work use case exists yet.
+
+Docs: `09-concurrency-and-threading.md` (THR-01/02), `14-background-work.md` (not implemented).
+
+## Phase G — Data platform
+**Model:** Sonnet 5 direct (implementation-worker role).
+**Status:** Code complete, compiles. Full gate pending consolidated pass.
+
+New module `:data:preferences` (Android library): `PreferencesDataSource` (generic `getInt`/`setInt` contract) + `DataStorePreferencesDataSource` (real `androidx.datastore:datastore-preferences:1.2.1` impl, catches `IOException` at the boundary per ERR-01 rather than crashing). `app/.../greeting/GreetingPreferencesRepository` is the mapping boundary (DAT-01) — the only class allowed to call `PreferencesDataSource` directly. `GreetingViewModel` now persists `nameIndex` there too, layered under the existing `SavedStateHandle` restoration: `SavedStateHandle` answers instantly (process death), DataStore is consulted asynchronously in `init` only when `SavedStateHandle` had nothing (a real cold start/full-app-restart case) — added `restart without SavedStateHandle falls back to the persisted preference` test for that path, plus a `FakePreferencesDataSource` (in-memory) for the existing tests.
+
+Network and Room stay **not implemented** (`10-data/{network,persistence-room,cache-and-offline}.md`) — no feature needs them yet.
+
+Docs: `10-data/{README,repositories,network,persistence-room,preferences-datastore,cache-and-offline,mapping-boundaries}.md`.
+
+### Build issue hit and fixed
+`:data:preferences:compileDebugKotlin` failed on `Unresolved reference 'inject'` — the module used `javax.inject.Inject` without declaring the dependency. Added `javax.inject:javax.inject:1` to the module (it was only present transitively in `:app` via Hilt).

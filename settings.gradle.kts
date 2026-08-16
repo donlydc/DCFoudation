@@ -25,4 +25,6 @@ dependencyResolutionManagement {
 rootProject.name = "DC Android Foundation"
 include(":app")
 include(":ui:designsystem")
+include(":runtime:concurrency")
+include(":data:preferences")
  
