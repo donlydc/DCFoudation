@@ -8,7 +8,7 @@ Dependency direction rules between layers/modules, and how they are verified. Do
 
 ## Current implementation
 
-Verified via Phase A reconnaissance (`PLAN_REPORT.md`): the repository has exactly one Gradle module, `:app` (`settings.gradle.kts`). There is no `core`/`feature` module split, so today module-graph verification (Gradle project dependencies) has nothing to check — the rules below apply at the **package/file** level within `:app` until a real module boundary exists.
+Verified against `settings.gradle.kts`: as of Phase F/G the repository has a 4-module split — `:app`, `:ui:designsystem`, `:runtime:concurrency`, and `:data:preferences` — with Hilt and DataStore wired through real bindings (`app/src/main/java/com/dc/android/foundation/di/*.kt`). There is not yet a `core`/`feature` split within `:app` itself, so module-graph verification (Gradle project dependencies) is meaningful for the 4 existing modules but the rules below still apply at the **package/file** level within `:app` until a feature module boundary exists.
 
 ## Target layer direction
 

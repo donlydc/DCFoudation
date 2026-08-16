@@ -8,7 +8,7 @@ A reusable Android base (DC Android Foundation) intended to provide architecture
 
 ## Current implementation state (verified — see `PLAN_REPORT.md` Phase A)
 
-As of Phase B, the repository is a single Gradle module (`:app`) built from the stock Android Studio Compose template: one `MainActivity`, a default Material3 theme, no Hilt/Room/Retrofit/WorkManager/Navigation/DataStore dependency, no multi-module split, no CI. Every invariant below states the **target** rule; several (INV-04, INV-08 in particular) describe behavior that does not exist yet and will only become checkable once the corresponding phase (D, C) has run. This document will be re-verified, not rewritten, as each phase lands.
+As of Phase F/G (see `settings.gradle.kts`), the repository has a 4-module split: `:app`, `:ui:designsystem`, `:runtime:concurrency`, and `:data:preferences`. Hilt (constructor injection + `@Module`/`@InstallIn` bindings, see `app/src/main/java/com/dc/android/foundation/di/*.kt`) and DataStore (`DataStoreModule.kt`) are both in real use; Room/Retrofit/WorkManager/Navigation are not yet present. Every invariant below states the **target** rule; several still describe behavior that is only partially realized and will only become fully checkable once the corresponding later phase has run. This document will be re-verified, not rewritten, as each phase lands.
 
 ## Invariants
 

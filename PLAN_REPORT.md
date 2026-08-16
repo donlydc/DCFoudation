@@ -244,3 +244,12 @@ Built `deliverables/android-base-project-final.zip` (227,748 bytes) from `git ls
 **Open gap carried forward unresolved (not a Phase L blocker):** `GreetingScreenTest` (Compose UI test) still has never executed — no emulator/device in this environment and CI doesn't run `connectedAndroidTest`. This remains the one genuinely unverified piece of the whole 12-phase build; whoever deploys this foundation to a real device/CI-with-emulator should run it before trusting it.
 
 All 12 phases (A–L) are now complete. This is the final entry in this tracking document.
+
+## Note — Opus escalation for Phases M–T planning
+**Model:** Opus (`claude-opus-5`), planning/design session only.
+
+An Opus session was used for the planning/design of Phases M onward (implementing the previously-deferred "not implemented" architecture areas: navigation, network, Room, cache, background work, permissions, secure storage, analytics, crash reporting via a second reference feature, `articles`). The escalation condition triggered was **#1** from `plan/CLAUDE_IMPLEMENTATION_PLAN.md` §1.1 — "two architecture rules conflict and source inspection cannot resolve it" — specifically the conflict between the user's explicit request to implement all remaining Reserved capabilities, and the plan's own §7 anti-overengineering constraint plus DEC-02's "do not pre-create empty seed docs" rule. Conditions **#4** (new module/dependency-direction changes across many new modules) and **#6** (adding Room/Retrofit/WorkManager to a foundation repo is a largely irreversible architectural commitment once downstream projects depend on it) were also touched by this planning session.
+
+This brings the cumulative Opus escalation count for the whole project from **0 to 1**, which is within the plan's stated 0–1 target (Phase K, above, had already confirmed zero Opus escalations through Phases F–J).
+
+All subsequent implementation phases (M through S) use Sonnet per the normal `implementation-worker` routing. Phase T's consistency-check step uses Haiku per `consistency-checker` routing, mirroring Phase J's approach.

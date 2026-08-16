@@ -43,3 +43,27 @@ Explicit intentional/current violations or non-yet-satisfied states of architect
 **Risk:** Low — a build-tooling compatibility flag, not an architecture/behavior change. Revisit when KSP ships an AGP-9-native release.
 
 **Owner/exit condition:** Remove the flag (and this entry) once a KSP release adds `android.sourceSets` support and the build still succeeds without it.
+
+### KD-04 — Secure storage (SEC-02) implemented with no real credential flowing through it
+
+**Rule affected:** SEC-02 (`12-security-and-session.md`)
+
+**Evidence:** `architecture/12-security-and-session.md` SEC-02 states no encrypted-storage rule exists yet because no credential exists to store, and that a token/credential data source will be added "when real auth exists."
+
+**Reason:** This build cycle adds a real `EncryptedSharedPreferences`- or Tink-backed secure storage data source, but — unlike the `articles` feature added under DEC-04 — there is no real authentication/login flow consuming it. Building a fake auth flow just to justify secure storage was judged worse than being explicit about the gap.
+
+**Risk:** Low — the code path is unused, not incorrect. The storage mechanism itself is production-grade and real; only SEC-02's "a real credential flows through it" trigger condition is not fully met.
+
+**Owner/exit condition:** Remove this deviation entry once a real auth/session feature is built that actually stores a credential through this data source.
+
+### KD-05 — Analytics/crash reporting implemented with a local no-op backend, no vendor SDK chosen
+
+**Rule affected:** OBS-ANALYTICS-01 (`15-observability/analytics.md`), OBS-CRASH-01 (`15-observability/crash-and-performance.md`)
+
+**Evidence:** `architecture/15-observability/analytics.md` states no analytics vendor has been chosen and building a contract with nothing behind it would be speculative; `crash-and-performance.md` takes the same stance for crash reporting.
+
+**Reason:** This build cycle adds a DC-owned interface + Hilt-bound implementation for both analytics and crash reporting, mirroring the `Logger`/`AndroidLogger` pattern exactly, but deliberately without picking a real vendor SDK (no Firebase/Amplitude/Crashlytics/Sentry dependency added). The bound implementation is a local no-op/logging-only implementation. Vendor choice remains, per both docs' own stated stance, a deliberate decision not to be made speculatively.
+
+**Risk:** Low — the contract and DI wiring are real and usable; only the vendor backend is intentionally absent.
+
+**Owner/exit condition:** Remove this deviation (or rather, replace the no-op implementation with a real vendor-backed implementation behind the same interface) once an actual vendor decision is made for a real downstream app built on this foundation.
