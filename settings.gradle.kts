@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "DC Android(Foundation"
+rootProject.name = "DC Android Foundation"
 include(":app")
  
