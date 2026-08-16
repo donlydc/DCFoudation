@@ -13,6 +13,7 @@ import com.dc.android.foundation.designsystem.components.DcButton
 import com.dc.android.foundation.designsystem.components.DcText
 import com.dc.android.foundation.designsystem.theme.DcTheme
 import com.dc.android.foundation.designsystem.tokens.SpacingTokens
+import com.dc.android.foundation.platform.permission.PermissionState
 
 /**
  * Stateless — receives [state], sends [onAction]. No ViewModel/DI/DAO/Retrofit import here
@@ -33,6 +34,12 @@ fun ArticlesScreen(
     ) {
         if (state.isShowingStaleData) {
             DcText(text = "Showing cached data — refresh failed")
+        }
+        if (state.notificationPermissionState != PermissionState.Granted) {
+            DcButton(
+                text = "Enable notifications for sync updates",
+                onClick = { onAction(ArticlesUiAction.RequestNotificationPermission) }
+            )
         }
         DcButton(
             text = if (state.isRefreshing) "Refreshing..." else "Refresh",

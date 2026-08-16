@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- PERM-01: the sync worker's completion notification (Android 13+/API 33+ requirement). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".DcApplication"
         android:allowBackup="true"
@@ -12,6 +15,23 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DCAndroidFoundation">
+
+        <!--
+          BG-01: WorkManager's default auto-init is replaced by DcApplication's
+          Configuration.Provider (androidx.hilt:hilt-work standard pattern) so the HiltWorkerFactory
+          is wired in before any Worker is instantiated.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

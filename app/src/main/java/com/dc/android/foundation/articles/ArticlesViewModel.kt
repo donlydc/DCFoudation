@@ -50,6 +50,15 @@ class ArticlesViewModel @Inject constructor(
     fun onAction(action: ArticlesUiAction) {
         when (action) {
             ArticlesUiAction.Refresh -> refresh()
+            ArticlesUiAction.RequestNotificationPermission -> requestNotificationPermission()
+            is ArticlesUiAction.UpdateNotificationPermissionState ->
+                _uiState.update { it.copy(notificationPermissionState = action.state) }
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        viewModelScope.launch {
+            _effects.send(ArticlesUiEffect.LaunchNotificationPermissionRequest)
         }
     }
 

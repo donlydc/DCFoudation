@@ -6,6 +6,7 @@ import com.dc.android.foundation.data.database.ArticleDao
 import com.dc.android.foundation.data.database.ArticleEntity
 import com.dc.android.foundation.data.network.NetworkResult
 import com.dc.android.foundation.observability.Logger
+import com.dc.android.foundation.platform.permission.PermissionState
 import com.dc.android.foundation.runtime.concurrency.FakeDispatcherProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -109,6 +110,31 @@ class ArticlesViewModelTest {
             (effects.single() as ArticlesUiEffect.ShowMessage).text
         )
         collector.cancel()
+    }
+
+    @Test
+    fun `RequestNotificationPermission emits a LaunchNotificationPermissionRequest effect`() = runTest {
+        val viewModel = createViewModel()
+        val effects = mutableListOf<ArticlesUiEffect>()
+        val collector = launch { viewModel.effects.toList(effects) }
+
+        viewModel.onAction(ArticlesUiAction.RequestNotificationPermission)
+        advanceUntilIdle()
+
+        assertEquals(1, effects.size)
+        assertEquals(ArticlesUiEffect.LaunchNotificationPermissionRequest, effects.single())
+        collector.cancel()
+    }
+
+    @Test
+    fun `UpdateNotificationPermissionState updates the permission field in state`() = runTest {
+        val viewModel = createViewModel()
+        assertEquals(PermissionState.NotRequested, viewModel.uiState.value.notificationPermissionState)
+
+        viewModel.onAction(ArticlesUiAction.UpdateNotificationPermissionState(PermissionState.Granted))
+        advanceUntilIdle()
+
+        assertEquals(PermissionState.Granted, viewModel.uiState.value.notificationPermissionState)
     }
 }
 
