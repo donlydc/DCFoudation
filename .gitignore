@@ -1,0 +1,180 @@
+# ============================================================
+# Android / Gradle
+# ============================================================
+
+.gradle/
+build/
+**/build/
+out/
+
+# Gradle local configuration
+gradle-app.setting
+!gradle-wrapper.jar
+
+# Local SDK path
+local.properties
+
+
+# ============================================================
+# Android Studio / IntelliJ IDEA
+# ============================================================
+
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Android Studio generated files
+captures/
+.navigation/
+.externalNativeBuild/
+.cxx/
+
+# APK / Bundle outputs
+*.apk
+*.aab
+*.ap_
+*.aar
+
+
+# ============================================================
+# Kotlin / Java
+# ============================================================
+
+*.class
+.kotlin/
+kotlin-js-store/
+
+
+# ============================================================
+# Signing / Secrets / Environment
+# ============================================================
+
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+
+keystore.properties
+signing.properties
+
+.env
+.env.*
+!.env.example
+
+secrets.properties
+secrets/
+private/
+
+# Firebase / Google service config
+google-services.json
+**/google-services.json
+
+# Service account credentials
+*service-account*.json
+*credentials*.json
+
+
+# ============================================================
+# Logs / Reports / Temporary files
+# ============================================================
+
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+lint-results*
+lint-report*
+test-results/
+reports/
+
+# Heap / profiling dumps
+*.hprof
+*.heapdump
+
+
+# ============================================================
+# Graphify
+# ============================================================
+
+# Generated knowledge graph / reports
+graphify-out/
+
+# Local Graphify state/cache if created
+.graphify/
+.graphify-cache/
+
+# Do not commit project-local generated Graphify Claude skill
+.claude/skills/graphify/
+
+
+# Temporary AI scratch/work directories
+.ai/
+.ai-context/
+.ai-scratch/
+scratch/
+worktree/
+
+# Generated task/context files
+TASK.md
+task.md
+CONTEXT.md
+context.local.md
+
+# Local Claude Code state
+.claude/settings.local.json
+.claude/*.local.json
+
+# NOTE:
+# CLAUDE.md is intentionally NOT ignored.
+# architecture/ is intentionally NOT ignored.
+# .claude/settings.json may be committed when it defines shared project hooks/settings.
+
+
+# ============================================================
+# VS Code / Other editors
+# ============================================================
+
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+
+# ============================================================
+# OS generated files
+# ============================================================
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+
+$RECYCLE.BIN/
+
+
+# ============================================================
+# Misc generated artifacts
+# ============================================================
+
+*.tmp
+*.bak
+*.orig
+
+# Maven publish local staging / generated repository
+repo/
+repository/
+staging/
+
+# Dokka / generated docs
+dokka/
+docs/generated/
