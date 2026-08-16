@@ -175,6 +175,9 @@ repo/
 repository/
 staging/
 
+# Sanitized delivery ZIPs (Phase L output) — generated artifact, not source
+deliverables/
+
 # Dokka / generated docs
 dokka/
 docs/generated/

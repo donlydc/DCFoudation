@@ -1,7 +1,7 @@
 # Task Handover — DC Android Foundation
 
 **Date:** 2026-08-16
-**Handing over at:** end of Phase K. Phase L (final validation + sanitized ZIP) is the only phase of the 12-phase plan not yet started.
+**Handing over at:** all 12 phases (A–L) complete. This build is finished; see "Open gaps" below for the one thing still worth doing before treating it as production-verified.
 
 ## Where to start reading
 
@@ -25,7 +25,7 @@
 | I — Testing, build logic, CI, quality | done | `144902e` |
 | J — Architecture documentation finalization (Gate: PASS) | done | `595a089` |
 | K — Critical audit | **skipped, justified** — no Opus escalation condition fired | `595a089` |
-| **L — Final validation & sanitized ZIP** | **not started** | — |
+| L — Final validation & sanitized ZIP | done | (uncommitted as of this edit) |
 
 ## What actually exists (verified, not aspirational)
 
@@ -47,15 +47,13 @@ Everything **not** built (Navigation, Room, network, WorkManager, security/sessi
 - 12 Android Lint warnings exist (`app/build/reports/lint-results-debug.html`, regenerate via `./gradlew lintDebug`) — not triaged individually; none are blocking (0 errors).
 - Known deviations (`architecture/22-known-deviations.md`): KD-01 (namespace doc fixed, no longer open), KD-02 (resolved — module boundary now exists), KD-03 (`android.disallowKotlinSourceSets=false` still required — remove once KSP ships an AGP-9-native release; check on any KSP upgrade).
 
-## Next step: Phase L
+## Phase L result (2026-08-16)
 
-Per `plan/CLAUDE_IMPLEMENTATION_PLAN.md` §Phase L:
+Ran fresh (not reused): `./gradlew test lint assembleDebug` → BUILD SUCCESSFUL, 7/7 tests passing, 0 lint errors, matching the last known-good state exactly. Tree was clean (`git status --short` / `git diff --check` both empty) before archiving.
 
-1. Run the canonical commands again fresh: `./gradlew test`, `./gradlew lint`, `./gradlew assembleDebug`.
-2. `git status --short` / `git diff --check` — confirm a clean tree.
-3. Build a sanitized `deliverables/android-base-project-final.zip`, excluding `.git/`, `.gradle/`, `**/build/`, `.idea/`, `local.properties`, `.env*`, keystores, `signing.properties`, `secrets.properties`, and any previous ZIP output. (Do not delete these from the working copy — only exclude them from the archive.)
-4. List the ZIP's contents and verify none of the forbidden paths above are present.
-5. Append a final entry to `PLAN_REPORT.md` (archive path, size, and a last unresolved-deviations summary) rather than starting a new tracking document — that file is the running record for this whole build.
+Built `deliverables/android-base-project-final.zip` (227,748 bytes) from the 186 `git ls-files`-tracked files, staged into a temp directory to preserve directory structure (plain `Compress-Archive -Path $files` flattens everything into one directory and silently collides same-named files — hit this, fixed it, see `PLAN_REPORT.md`'s Phase L entry for detail). Verified by enumerating the archive: 225 entries, structure intact, zero forbidden paths (`.git/`, `.gradle/`, `build/`, `.idea/`, `local.properties`, `.env*`, keystores, secrets). Added `deliverables/` to `.gitignore` — the ZIP is a generated artifact and is not committed to the repo; regenerate it from `git ls-files` at any commit if needed.
+
+Full detail and the final unresolved-deviations summary are in `PLAN_REPORT.md`'s Phase L entry (the last entry in that file).
 
 ## Model routing (for whoever continues to follow it)
 
