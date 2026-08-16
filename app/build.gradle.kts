@@ -42,6 +42,7 @@ dependencies {
     implementation(project(":ui:designsystem"))
     implementation(project(":runtime:concurrency"))
     implementation(project(":data:preferences"))
+    implementation(project(":observability"))
     implementation(libs.androidx.datastore.preferences)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
