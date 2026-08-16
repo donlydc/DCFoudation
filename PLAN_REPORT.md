@@ -73,3 +73,27 @@ Did not pre-create the other 19 seed docs (`04`-`21`, `07-design-system/*`, `10-
 
 ### Gate B — consistency check (Haiku subagent)
 Verified independently, all PASS: all 10 internal markdown links resolve; `settings.gradle.kts` really only includes `:app`; namespace claims match `app/build.gradle.kts` and every `package` declaration; Hilt/Room/Retrofit/WorkManager/Navigation/DataStore really absent from `libs.versions.toml`/`app/build.gradle.kts`; `MainActivity.kt` has zero infra imports; `CLAUDE.md` now states the corrected namespace; 22 rule IDs (INV/DEP/STR/KD/DEC) checked, zero collisions; `00-index.md` status table matches actual files on disk exactly.
+
+---
+
+## Phase C — Design System foundation
+**Model:** Sonnet 5 direct (implementation-worker role).
+**Status:** Gate C passed (real `./gradlew` compile, not just a doc claim).
+
+### New module `:ui:designsystem`
+`com.dc.android.foundation.designsystem` — Android library module, added to `settings.gradle.kts`, depended on by `:app`. Required adding `alias(libs.plugins.android.library) apply false` to the *root* `build.gradle.kts` (not just the version catalog) — omitting it caused `Error resolving plugin [id: 'com.android.library']... already on the classpath with an unknown version` because AGP's application and library plugins ship in one artifact and need to be declared together at the root for consistent version resolution.
+
+- `tokens/` — `ColorTokens`, `SpacingTokens`, `ShapeTokens`, `MotionTokens`, `AccessibilityTokens`.
+- `theme/` — `DcTheme` (semantic entry point, dynamic-color aware), `DcTypography`, `DcShapes`.
+- `components/` — `DcText`, `DcButton` (enforces `AccessibilityTokens.MinTouchTarget` centrally).
+- `catalog/DesignSystemCatalog.kt` — manual light/dark preview catalog.
+
+### Migration
+Deleted `app/.../ui/theme/{Color,Type,Theme}.kt` (superseded). `MainActivity.kt` now roots in `DcTheme` and uses `DcText` instead of raw Material `Text`/`DCAndroidFoundationTheme`.
+
+### Docs
+`architecture/07-design-system/{README,tokens,semantic-theme,typography,spacing-shapes-elevation,components,motion,adaptive-accessibility,previews-and-catalog}.md` — each states current (real) implementation; motion/adaptive explicitly marked "not implemented yet" rather than inventing policy nothing uses (INV-10). New rule IDs: DS-01..DS-04.
+
+### Gate C verification
+- `./gradlew :ui:designsystem:compileDebugKotlin :app:compileDebugKotlin` → **BUILD SUCCESSFUL** (had to fix the plugin-resolution issue above first).
+- Hard-coded value scan: `grep '0xFF|\.dp\b|RoundedCornerShape\('` across `app/src` → zero matches outside `ui/designsystem`.

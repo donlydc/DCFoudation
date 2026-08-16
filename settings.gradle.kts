@@ -24,4 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "DC Android Foundation"
 include(":app")
+include(":ui:designsystem")
  
