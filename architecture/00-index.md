@@ -7,7 +7,7 @@
 
 ## Status
 
-This tree is populated phase-by-phase per [`../plan/CLAUDE_IMPLEMENTATION_PLAN.md`](../plan/CLAUDE_IMPLEMENTATION_PLAN.md). As of Phase G, only the documents below exist. A topic-routing row pointing at a not-yet-created file means that phase hasn't run yet — check [`../PLAN_REPORT.md`](../PLAN_REPORT.md) for current progress, do not invent the content.
+This tree is populated phase-by-phase per [`../plan/CLAUDE_IMPLEMENTATION_PLAN.md`](../plan/CLAUDE_IMPLEMENTATION_PLAN.md). As of Phase I, only the documents below exist. A topic-routing row pointing at a not-yet-created file means that phase hasn't run yet — check [`../PLAN_REPORT.md`](../PLAN_REPORT.md) for current progress, do not invent the content.
 
 | Document | Status |
 |---|---|
@@ -21,8 +21,17 @@ This tree is populated phase-by-phase per [`../plan/CLAUDE_IMPLEMENTATION_PLAN.m
 | `08-dependency-injection-hilt.md` | done (Phase D) |
 | `09-concurrency-and-threading.md` | done (Phase F) |
 | `10-data/*` (7 files) | done (Phase G; network/persistence-room/cache-and-offline marked not-implemented) |
+| `11-error-and-result-model.md` | done (Phase H) |
+| `12-security-and-session.md` | done (Phase H, mostly not-implemented) |
+| `13-permissions.md` | done (Phase H, marked not-implemented) |
 | `14-background-work.md` | done (Phase F, marked not-implemented) |
+| `15-observability/*` (4 files) | done (Phase H; analytics/crash-and-performance marked not-implemented) |
+| `16-config-feature-flags-environments.md` | done (Phase H) |
+| `17-testing.md` | done (Phase I) |
+| `18-build-logic-and-dependencies.md` | done (Phase I) |
+| `19-ci-release-quality-gates.md` | done (Phase I) |
 | `20-feature-template.md` | done (Phase E) |
+| `21-coding-rules.md` | done (Phase I) |
 | `22-known-deviations.md` | living document, updated every phase |
 | `23-decision-log.md` | living document, updated every phase |
 | `24-ai-reading-guide.md` | done (Phase B) |

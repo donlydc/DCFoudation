@@ -3,6 +3,7 @@ package com.dc.android.foundation.greeting
 import androidx.lifecycle.SavedStateHandle
 import com.dc.android.foundation.MainDispatcherRule
 import com.dc.android.foundation.data.preferences.PreferencesDataSource
+import com.dc.android.foundation.observability.Logger
 import com.dc.android.foundation.runtime.concurrency.FakeDispatcherProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,6 +35,7 @@ class GreetingViewModelTest {
         fakeProvider,
         GreetingPreferencesRepository(preferencesDataSource),
         fakeDispatcherProvider,
+        NoOpLogger,
         savedStateHandle
     )
 
@@ -117,6 +119,11 @@ class GreetingViewModelTest {
 
 private class FakeGreetingProvider : GreetingProvider {
     override fun greetingFor(name: String): String = "Hello $name!"
+}
+
+private object NoOpLogger : Logger {
+    override fun d(tag: String, message: String) = Unit
+    override fun e(tag: String, message: String, throwable: Throwable?) = Unit
 }
 
 private class FakePreferencesDataSource : PreferencesDataSource {

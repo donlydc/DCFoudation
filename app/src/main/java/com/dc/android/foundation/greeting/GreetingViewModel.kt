@@ -3,6 +3,7 @@ package com.dc.android.foundation.greeting
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dc.android.foundation.observability.Logger
 import com.dc.android.foundation.runtime.concurrency.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -18,6 +19,7 @@ import javax.inject.Inject
 
 private val NAMES = listOf("Android", "World", "DC")
 private const val KEY_NAME_INDEX = "nameIndex"
+private const val LOG_TAG = "GreetingViewModel"
 
 /**
  * Canonical feature shape (05-presentation-udf.md): UiState down via [uiState], actions up
@@ -33,6 +35,7 @@ class GreetingViewModel @Inject constructor(
     private val greetingProvider: GreetingProvider,
     private val preferencesRepository: GreetingPreferencesRepository,
     private val dispatcherProvider: DispatcherProvider,
+    private val logger: Logger,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -73,6 +76,7 @@ class GreetingViewModel @Inject constructor(
 
     private fun refresh() {
         viewModelScope.launch {
+            logger.d(LOG_TAG, "refresh: nameIndex=$nameIndex -> ${(nameIndex + 1) % NAMES.size}")
             _uiState.update { it.copy(isRefreshing = true) }
             nameIndex = (nameIndex + 1) % NAMES.size
             preferencesRepository.setLastNameIndex(nameIndex)

@@ -170,3 +170,26 @@ Docs: `10-data/{README,repositories,network,persistence-room,preferences-datasto
 
 ### Build issue hit and fixed
 `:data:preferences:compileDebugKotlin` failed on `Unresolved reference 'inject'` — the module used `javax.inject.Inject` without declaring the dependency. Added `javax.inject:javax.inject:1` to the module (it was only present transitively in `:app` via Hilt).
+
+## Phase H — Error, security, permissions, config, observability
+**Model:** Sonnet 5 direct (implementation-worker role).
+**Status:** Code complete, compiles. Full gate pending consolidated pass.
+
+Implemented (real, used) pieces only; everything else honestly marked not-implemented rather than speculatively scaffolded:
+- **Observability/logging:** `Logger` interface + `AndroidLogger` (gates `d()` on debug build, `e()` always logs), bound in `di/ObservabilityModule.kt`, used by `GreetingViewModel.refresh()` — a real call site, not just plumbing.
+- **Config:** `AppEnvironment` enum + `AppEnvironmentProvider` (the one file allowed to read `BuildConfig.DEBUG` — required adding `buildFeatures.buildConfig = true` to `app/build.gradle.kts`, off by default on this AGP version), consumed by `ObservabilityModule` to decide `AndroidLogger`'s debug gate.
+- **Error model:** `11-error-and-result-model.md` formalizes ERR-01 against the `DataStorePreferencesDataSource` catch already written in Phase G — no new code, just naming the pattern.
+- **Security, permissions:** both **not implemented** — no auth/session/credentials and no runtime permission exists anywhere in the app, so a contract for either would be pure speculation. `12-security-and-session.md` does define SEC-01 (no secret/token/PII in a `Logger` call) since that's enforceable today even with no secrets yet.
+- **Analytics, crash reporting, performance tracing:** not implemented — no vendor decision made (plan's explicit "don't couple to a vendor SDK without an intentional decision").
+
+Docs: `11-error-and-result-model.md` (ERR-01), `12-security-and-session.md` (SEC-01), `13-permissions.md` (not-implemented), `16-config-feature-flags-environments.md` (CFG-01), `15-observability/{README,logging,analytics,crash-and-performance}.md` (OBS-01; analytics/crash marked not-implemented).
+
+## Phase I — Testing, build logic, CI, quality
+**Model:** Sonnet 5 direct (implementation-worker role).
+**Status:** Code complete, compiles. Full gate (including whether CI actually goes green on GitHub) pending consolidated pass / first real push.
+
+- **CI:** `.github/workflows/ci.yml` — `testDebugUnitTest` → `lintDebug` → `assembleDebug` on push/PR, uploads JUnit XML. Does **not** run `connectedAndroidTest` (no emulator runner configured) — logged as an honest gap in `19-ci-release-quality-gates.md`, not hidden.
+- **Compose UI test:** `app/src/androidTest/.../greeting/GreetingScreenTest.kt` (2 tests) — exercises the stateless `GreetingScreen` directly, no ViewModel/DI. **Requires a device/emulator to run**, which this environment doesn't have; compiles cleanly (`compileDebugAndroidTestKotlin` verified) but has not been executed here — stated plainly rather than implied-passing.
+- **Build logic:** convention plugins explicitly deferred (`18-build-logic-and-dependencies.md`) — 3 Android modules' shared boilerplate doesn't yet outweigh maintaining a `build-logic` included build (anti-overengineering).
+
+Docs: `17-testing.md` (TST-01/02), `18-build-logic-and-dependencies.md` (BLD-01), `19-ci-release-quality-gates.md` (CI-01), `21-coding-rules.md` (CODE-01, plus an index of rules defined elsewhere).

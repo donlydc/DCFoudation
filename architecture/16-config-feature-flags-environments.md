@@ -1,0 +1,33 @@
+# Config, feature flags & environments
+
+[Back to architecture index](00-index.md)
+
+## Scope
+
+Environment/build-variant awareness and feature-flag ownership.
+
+## Current implementation
+
+- `app/.../config/AppEnvironment.kt` — `enum class AppEnvironment { DEBUG, RELEASE }`.
+- `app/.../config/AppEnvironmentProvider.kt` — the **only** file allowed to read `BuildConfig.DEBUG` directly; exposes `AppEnvironmentProvider.current: AppEnvironment`.
+- Consumer: `di/ObservabilityModule.kt` builds `AndroidLogger(isDebug = AppEnvironmentProvider.current == AppEnvironment.DEBUG)` — a real use, not speculative plumbing.
+- No feature flags exist — nothing branches on one yet. When one is needed, it reads `AppEnvironment`, not raw `BuildConfig`, and stays provider-neutral (no LaunchDarkly/Firebase Remote Config dependency without an explicit decision — plan §H).
+- Only one build type is meaningfully differentiated today (`debug` vs `release`, both declared in `app/build.gradle.kts`; `release.optimization.enable = false` — R8/minify is off, noted as-is, not a target-state claim).
+
+## Rules
+
+### CFG-01 — `BuildConfig.DEBUG` is read in exactly one place
+
+**Rule:** Only `AppEnvironmentProvider` reads `BuildConfig.DEBUG`; everything else takes `AppEnvironment`.
+
+**Why:** One seam to extend when a real feature-flag provider is adopted, instead of `BuildConfig.DEBUG` checks scattered across the codebase.
+
+**Verification:** `grep 'BuildConfig\.DEBUG'` across `app/src` — should only match `AppEnvironmentProvider.kt`.
+
+## Testing / validation
+
+None yet — `AppEnvironmentProvider` is a one-line `if`; revisit once a real feature flag adds branching worth testing.
+
+## Related documents
+
+- [`15-observability/logging.md`](15-observability/logging.md)
