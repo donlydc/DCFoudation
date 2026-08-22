@@ -1,5 +1,6 @@
 package com.dc.android.foundation.data.network
 
+import com.dc.android.foundation.core.AppError
 import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
@@ -28,7 +29,7 @@ class NetworkResultTest {
         val result = safeApiCall<String> { throw cause }
 
         assertTrue(result is NetworkResult.Failure)
-        assertEquals(cause, (result as NetworkResult.Failure).throwable)
+        assertEquals(AppError.Connectivity(cause), (result as NetworkResult.Failure).error)
     }
 
     @Test
@@ -42,7 +43,10 @@ class NetworkResultTest {
         val result = safeApiCall<String> { throw cause }
 
         assertTrue(result is NetworkResult.Failure)
-        assertEquals(cause, (result as NetworkResult.Failure).throwable)
+        assertEquals(
+            AppError.Http(code = 500, serverMessage = cause.message(), cause = cause),
+            (result as NetworkResult.Failure).error
+        )
     }
 
     @Test(expected = IllegalStateException::class)

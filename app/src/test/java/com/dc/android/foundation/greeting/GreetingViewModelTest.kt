@@ -1,16 +1,13 @@
 package com.dc.android.foundation.greeting
 
 import androidx.lifecycle.SavedStateHandle
-import com.dc.android.foundation.MainDispatcherRule
 import com.dc.android.foundation.data.preferences.PreferencesDataSource
-import com.dc.android.foundation.observability.Logger
-import com.dc.android.foundation.runtime.concurrency.FakeDispatcherProvider
+import com.dc.android.foundation.testing.FakeDispatcherProvider
+import com.dc.android.foundation.testing.InMemoryPreferencesDataSource
+import com.dc.android.foundation.testing.MainDispatcherRule
+import com.dc.android.foundation.testing.NoOpLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -30,7 +27,7 @@ class GreetingViewModelTest {
 
     private fun createViewModel(
         savedStateHandle: SavedStateHandle = SavedStateHandle(),
-        preferencesDataSource: PreferencesDataSource = FakePreferencesDataSource()
+        preferencesDataSource: PreferencesDataSource = InMemoryPreferencesDataSource()
     ) = GreetingViewModel(
         fakeProvider,
         GreetingPreferencesRepository(preferencesDataSource),
@@ -71,17 +68,17 @@ class GreetingViewModelTest {
     }
 
     @Test
-    fun `Refresh action emits a ShowMessage effect`() = runTest {
+    fun `Refresh action exposes a user message until acknowledged`() = runTest {
         val viewModel = createViewModel()
-        val effects = mutableListOf<GreetingUiEffect>()
-        val collector = launch { viewModel.effects.toList(effects) }
 
         viewModel.onAction(GreetingUiAction.Refresh)
         advanceUntilIdle()
 
-        assertEquals(1, effects.size)
-        assertEquals("Refreshed", (effects.single() as GreetingUiEffect.ShowMessage).text)
-        collector.cancel()
+        assertEquals("Refreshed", viewModel.uiState.value.userMessage)
+
+        viewModel.onAction(GreetingUiAction.UserMessageShown)
+
+        assertEquals(null, viewModel.uiState.value.userMessage)
     }
 
     @Test
@@ -100,7 +97,7 @@ class GreetingViewModelTest {
 
     @Test
     fun `restart without SavedStateHandle falls back to the persisted preference`() = runTest {
-        val sharedPreferences = FakePreferencesDataSource()
+        val sharedPreferences = InMemoryPreferencesDataSource()
         val first = createViewModel(preferencesDataSource = sharedPreferences)
         first.onAction(GreetingUiAction.Refresh)
         advanceUntilIdle()
@@ -119,20 +116,4 @@ class GreetingViewModelTest {
 
 private class FakeGreetingProvider : GreetingProvider {
     override fun greetingFor(name: String): String = "Hello $name!"
-}
-
-private object NoOpLogger : Logger {
-    override fun d(tag: String, message: String) = Unit
-    override fun e(tag: String, message: String, throwable: Throwable?) = Unit
-}
-
-private class FakePreferencesDataSource : PreferencesDataSource {
-    private val values = mutableMapOf<String, MutableStateFlow<Int>>()
-
-    override fun getInt(key: String, default: Int): Flow<Int> =
-        values.getOrPut(key) { MutableStateFlow(default) }
-
-    override suspend fun setInt(key: String, value: Int) {
-        values.getOrPut(key) { MutableStateFlow(value) }.value = value
-    }
 }

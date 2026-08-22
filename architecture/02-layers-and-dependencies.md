@@ -8,7 +8,7 @@ Dependency direction rules between layers/modules, and how they are verified. Do
 
 ## Current implementation
 
-Verified against `settings.gradle.kts`: as of Phase F/G the repository has a 4-module split — `:app`, `:ui:designsystem`, `:runtime:concurrency`, and `:data:preferences` — with Hilt and DataStore wired through real bindings (`app/src/main/java/com/dc/android/foundation/di/*.kt`). There is not yet a `core`/`feature` split within `:app` itself, so module-graph verification (Gradle project dependencies) is meaningful for the 4 existing modules but the rules below still apply at the **package/file** level within `:app` until a feature module boundary exists.
+Verified against `settings.gradle.kts`: the repository has 13 modules — `:foundation`, `:app`, `:ui:designsystem`, `:runtime:{concurrency,background}`, `:data:{preferences,network,database}`, `:platform:{navigation,permission}`, `:security`, `:observability`, and `:testing`. `:foundation` owns minimal Android-free shared contracts, including `AppError`; Hilt bindings and product-specific wiring live in `:app`; reusable production modules do not depend on feature implementations. `:testing` is consumed only from test configurations. `greeting` and `articles` are still packages inside `:app`, so feature-to-feature rules remain enforceable at package/import level until a real ownership or build boundary justifies feature modules.
 
 ## Target layer direction
 

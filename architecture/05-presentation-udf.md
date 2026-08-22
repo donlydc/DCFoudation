@@ -4,24 +4,23 @@
 
 ## Scope
 
-The canonical feature shape: Route/ViewModel/UiState/UiAction/UiEffect/Screen, and the UDF rule (state down, actions up). Concrete per-file responsibilities are generalized into [`20-feature-template.md`](20-feature-template.md).
+The canonical feature shape: Route/ViewModel/UiState/UiAction/Screen plus an optional UI-integration effect, and the UDF rule (state down, actions up). Concrete per-file responsibilities are generalized into [`20-feature-template.md`](20-feature-template.md).
 
 ## Current implementation
 
-`greeting/` is the first (and so far only) feature built to this contract:
+Both reference features use this contract: `greeting` proves the minimal state/action/persistence shape; `articles` proves loading, stale-cache state, permission integration, analytics and an offline-first repository. The canonical file shape is:
 
 ```text
 GreetingUiState.kt    data class — everything GreetingScreen needs to render
 GreetingUiAction.kt   sealed interface — user intents (Refresh)
-GreetingUiEffect.kt   sealed interface — one-shot events (ShowMessage), never replayed as state
-GreetingViewModel.kt  @HiltViewModel — owns StateFlow<GreetingUiState>, Channel<GreetingUiEffect>, onAction(action)
+GreetingViewModel.kt  @HiltViewModel — owns StateFlow<GreetingUiState> and onAction(action)
 GreetingScreen.kt     stateless @Composable(state, onAction) — no DI, no ViewModel import; previewable
-GreetingRoute.kt       stateful @Composable — the only place that calls hiltViewModel(), collects state
-                        with collectAsStateWithLifecycle(), collects effects with a LaunchedEffect, hosts
+GreetingRoute.kt      stateful @Composable — the only place that calls hiltViewModel(), collects state
+                        with collectAsStateWithLifecycle(), renders pending messages, hosts
                         the feature's own Scaffold/SnackbarHost
 ```
 
-`MainActivity` is now just `DcTheme { GreetingRoute() }` — the app shell, not feature logic.
+`MainActivity` owns the themed top-level navigation shell and selects `GreetingRoute`/`ArticlesRoute`; feature UI and data logic remain outside the activity.
 
 ## Rules
 
@@ -33,13 +32,13 @@ GreetingRoute.kt       stateful @Composable — the only place that calls hiltVi
 
 **Verification:** `GreetingScreen.kt` has zero `hiltViewModel`/`ViewModel` import; its two `@Preview`s construct `GreetingUiState` by hand.
 
-### UI-02 — One-shot events use a `UiEffect` channel, not `UiState`
+### UI-02 — ViewModel outcomes become state; effects are limited to immediate UI integration
 
-**Rule:** Events that should fire exactly once (snackbar, navigation trigger) go through a `Channel`/`SharedFlow` of a `UiEffect` sealed type, collected in the Route via `LaunchedEffect`; they are never stored as a boolean/nullable field on `UiState` (which would re-fire on recomposition/rotation).
+**Rule:** A ViewModel-originated outcome that the user must observe (message, success/failure, validated navigation readiness) updates `UiState`. A transient message stays present until the Route displays it and sends a `UserMessageShown` action. `UiEffect` is optional and reserved for immediate framework/UI integration that is itself initiated by a foreground user action, such as launching the OS permission dialog; it is not a second transport for business outcomes.
 
-**Why:** Avoids the classic "snackbar shows again on rotation" bug class.
+**Why:** State survives temporary collector/lifecycle loss and remains testable/reproducible. Keeping framework launchers in the Route still prevents Android types from leaking into ViewModels.
 
-**Verification:** `GreetingViewModel._effects` is a `Channel`, not a `StateFlow` field; `GreetingRoute`'s `LaunchedEffect(viewModel) { viewModel.effects.collect { ... } }` keyed on `viewModel` (stable across recomposition) not `Unit`.
+**Verification:** `GreetingUiState.userMessage` is cleared only by `GreetingUiAction.UserMessageShown`; `greeting` has no effect stream. `articles` retains only `LaunchNotificationPermissionRequest` as an effect because the Route owns the framework permission launcher.
 
 ### UI-03 — No universal `BaseViewModel`
 
@@ -51,7 +50,7 @@ GreetingRoute.kt       stateful @Composable — the only place that calls hiltVi
 
 ## Testing / validation
 
-`GreetingViewModelTest` (5 tests) covers: initial state, a single state transition, action cycling back to the start, effect emission (collected via `Channel.receiveAsFlow().toList(...)` in a background `launch`), and `SavedStateHandle` restoration. Uses `MainDispatcherRule` (`app/src/test/.../MainDispatcherRule.kt`) to make `viewModelScope` deterministic under `runTest`.
+`GreetingViewModelTest` covers initial state, state transitions, durable message acknowledgement, cycling, and `SavedStateHandle`/DataStore restoration. Coroutine tests use the shared `MainDispatcherRule` from `:testing`.
 
 ## Related documents
 

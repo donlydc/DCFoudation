@@ -22,7 +22,7 @@ New Gradle module `:ui:designsystem` (namespace `com.dc.android.foundation.desig
 
 - `tokens/` — `ColorTokens`, `SpacingTokens`, `ShapeTokens`, `MotionTokens`, `AccessibilityTokens`.
 - `theme/` — `DcTheme` (semantic entry point), `DcTypography`, `DcShapes`.
-- `components/` — `DcText`, `DcButton`.
+- `components/` — text/button primitives plus controlled text/password input, loading/empty/error/offline states and an accessible list row.
 - `catalog/DesignSystemCatalog.kt` — manual preview catalog (light + dark).
 
 `app`'s old `ui/theme/{Color,Type,Theme}.kt` were deleted; `MainActivity.kt` now themes through `DcTheme` and uses `DcText` instead of a raw Material `Text`.

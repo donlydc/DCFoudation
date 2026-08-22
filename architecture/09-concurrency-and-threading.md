@@ -8,7 +8,7 @@ Dispatcher ownership policy and how ViewModels/repositories move work off the ma
 
 ## Current implementation
 
-`:runtime:concurrency` (plain Kotlin/JVM module, no Android/DI dependency — INV-03): `DispatcherProvider` interface (`main`/`mainImmediate`/`io`/`default`), `DefaultDispatcherProvider` (real `kotlinx.coroutines.Dispatchers.*`), `FakeDispatcherProvider` (all four point at one dispatcher, for tests). `:app`'s `di/ConcurrencyModule.kt` provides the Hilt singleton binding — see the cross-module-binding note in [`08-dependency-injection-hilt.md`](08-dependency-injection-hilt.md).
+`:runtime:concurrency` (plain Kotlin/JVM module, no Android/DI dependency — INV-03) owns `DispatcherProvider` (`main`/`mainImmediate`/`io`/`default`) and `DefaultDispatcherProvider`. The P0 `:testing` module owns `FakeDispatcherProvider`, keeping a test-only type out of production artifacts. `:app`'s `di/ConcurrencyModule.kt` provides the Hilt singleton binding — see the cross-module-binding note in [`08-dependency-injection-hilt.md`](08-dependency-injection-hilt.md).
 
 `GreetingViewModel` uses `dispatcherProvider.default` via `withContext(...)` around `greetingProvider.greetingFor(...)` — the computation itself is trivial today, but the pattern is what matters: no `GreetingViewModel` code references `kotlinx.coroutines.Dispatchers` directly. `viewModelScope` owns every coroutine the ViewModel launches; nothing uses `GlobalScope`.
 
@@ -28,7 +28,7 @@ Dispatcher ownership policy and how ViewModels/repositories move work off the ma
 
 **Why:** Makes dispatcher usage swappable/deterministic in tests (`FakeDispatcherProvider`) without `Dispatchers.setMain`-style global mutation for every dispatcher, not just `Main`.
 
-**Verification:** `grep 'Dispatchers\.'` outside `runtime/concurrency/` — should only ever appear inside `DefaultDispatcherProvider`/`FakeDispatcherProvider`/test rules (`MainDispatcherRule` legitimately swaps `Dispatchers.Main` itself, which is a platform-level hook DispatcherProvider doesn't abstract away).
+**Verification:** Production `Dispatchers.*` use stays inside `DefaultDispatcherProvider`; `:testing` may use `Dispatchers.Main`/test dispatchers to install deterministic virtual time.
 
 ## Testing / validation
 

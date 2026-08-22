@@ -8,7 +8,7 @@ Logging, analytics, crash reporting, and performance tracing stay behind separat
 
 ## Current implementation
 
-Only **logging** is implemented (`logging.md`). Analytics, crash reporting, and performance tracing are **not implemented** — no vendor has been chosen, and inventing a contract with zero real backend would be pure speculation (plan §7).
+Logging, analytics and crash reporting have DC-owned contracts with real call sites. The current analytics/crash adapters intentionally forward to logging rather than a vendor SDK (KD-05), so vendor selection remains a downstream composition decision. Dedicated performance tracing is not implemented yet.
 
 ## Related documents
 

@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -23,6 +24,7 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "DC Android Foundation"
+include(":foundation")
 include(":app")
 include(":ui:designsystem")
 include(":runtime:concurrency")
@@ -34,4 +36,4 @@ include(":runtime:background")
 include(":platform:navigation")
 include(":platform:permission")
 include(":security")
- 
+include(":testing")

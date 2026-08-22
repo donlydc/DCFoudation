@@ -8,12 +8,16 @@ Reusable Compose components exposed by `:ui:designsystem`.
 
 ## Current implementation
 
-Two components exist — deliberately minimal, sized to what `MainActivity.kt` actually needs today (anti-overengineering constraint):
+The component set covers policies repeated by both current and expected reference features:
 
 - **`DcText`** (`components/DcText.kt`) — wraps Material3 `Text`; defaults `style` to `MaterialTheme.typography.bodyLarge`.
-- **`DcButton`** (`components/DcButton.kt`) — wraps Material3 `Button`; applies `Modifier.defaultMinSize(minWidth = AccessibilityTokens.MinTouchTarget, minHeight = AccessibilityTokens.MinTouchTarget)` before the caller's own modifier, then delegates label rendering to Material3 `Text`. Not yet used by `app` (no button exists in the sample screen yet) but included in the catalog.
+- **`DcButton`** — semantic primary action with the accessibility touch-target floor.
+- **`DcTextField` / `DcPasswordTextField`** — controlled inputs with error semantics, keyboard hooks and caller-supplied localized visibility labels.
+- **`DcLoadingState`, `DcEmptyState`, `DcErrorState`** — consistent screen/content feedback; retry remains caller-owned.
+- **`DcOfflineBanner`** — semantic error-container connectivity feedback with optional action content.
+- **`DcListRow`** — standard list item; when clickable it applies button semantics and the touch-target floor.
 
-No other components exist. Do not add a `DcCard`/`DcTextField`/etc. speculatively — add it when a feature (Phase E onward) actually needs it, per `plan/CLAUDE_IMPLEMENTATION_PLAN.md` §7.
+New components still require a real shared policy (theme, spacing, accessibility or interaction). Do not wrap a Material component only to rename it.
 
 ## Rules
 
@@ -21,7 +25,7 @@ Governed by [`README.md`](README.md) DS-01/DS-02. No new rule IDs here.
 
 ## Testing / validation
 
-Both components render in `DesignSystemCatalog`'s light/dark previews.
+Every public component renders in `DesignSystemCatalog`'s light/dark previews.
 
 ## Related documents
 

@@ -20,8 +20,9 @@ import javax.inject.Inject
 private const val LOG_TAG = "ArticlesViewModel"
 
 /**
- * Canonical feature shape (05-presentation-udf.md), same UiState/onAction/effects contract as
- * `GreetingViewModel`. [articlesRepository] is the real DAT-CACHE-01 instance: Room emits
+ * Canonical feature shape (05-presentation-udf.md). User messages are durable UiState; the only
+ * remaining effect launches the framework-owned permission dialog. [articlesRepository] is the
+ * real DAT-CACHE-01 instance: Room emits
  * immediately via [ArticlesRepository.observeArticles], and [ArticlesRepository.refresh] is what
  * `Refresh` triggers. Network/DB work runs on [dispatcherProvider]'s `io` dispatcher, never a
  * hard-coded `Dispatchers.*` (09-concurrency-and-threading.md).
@@ -53,6 +54,8 @@ class ArticlesViewModel @Inject constructor(
         when (action) {
             ArticlesUiAction.Refresh -> refresh()
             ArticlesUiAction.RequestNotificationPermission -> requestNotificationPermission()
+            ArticlesUiAction.UserMessageShown ->
+                _uiState.update { it.copy(userMessage = null) }
             is ArticlesUiAction.UpdateNotificationPermissionState ->
                 _uiState.update { it.copy(notificationPermissionState = action.state) }
         }
@@ -75,14 +78,17 @@ class ArticlesViewModel @Inject constructor(
             if (succeeded) {
                 analyticsTracker.trackEvent(name = "articles_refreshed")
             }
-            _uiState.update { it.copy(isRefreshing = false, isShowingStaleData = !succeeded) }
-            _effects.send(
-                if (succeeded) {
-                    ArticlesUiEffect.ShowMessage("Refreshed")
-                } else {
-                    ArticlesUiEffect.ShowMessage("Refresh failed, showing cached data")
-                }
-            )
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    isShowingStaleData = !succeeded,
+                    userMessage = if (succeeded) {
+                        "Refreshed"
+                    } else {
+                        "Refresh failed, showing cached data"
+                    }
+                )
+            }
         }
     }
 }

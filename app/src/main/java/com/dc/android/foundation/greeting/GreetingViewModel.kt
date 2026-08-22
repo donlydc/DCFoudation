@@ -6,12 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.dc.android.foundation.observability.Logger
 import com.dc.android.foundation.runtime.concurrency.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,7 +21,8 @@ private const val LOG_TAG = "GreetingViewModel"
 
 /**
  * Canonical feature shape (05-presentation-udf.md): UiState down via [uiState], actions up
- * via [onAction], one-shot events via [effects]. [nameIndex] is restored two ways: instantly
+ * via [onAction]. User-visible messages stay in [uiState] until acknowledged, so they are not
+ * lost while the UI is stopped. [nameIndex] is restored two ways: instantly
  * from [SavedStateHandle] (survives process death, 04-app-bootstrap-and-lifecycle.md), then
  * reconciled against [preferencesRepository] (survives a full app restart, 10-data/README.md)
  * if `SavedStateHandle` had nothing yet. Work that isn't trivial runs on
@@ -50,9 +49,6 @@ class GreetingViewModel @Inject constructor(
     )
     val uiState: StateFlow<GreetingUiState> = _uiState.asStateFlow()
 
-    private val _effects = Channel<GreetingUiEffect>(Channel.BUFFERED)
-    val effects = _effects.receiveAsFlow()
-
     init {
         if (savedStateHandle.get<Int>(KEY_NAME_INDEX) == null) {
             viewModelScope.launch {
@@ -71,6 +67,8 @@ class GreetingViewModel @Inject constructor(
     fun onAction(action: GreetingUiAction) {
         when (action) {
             GreetingUiAction.Refresh -> refresh()
+            GreetingUiAction.UserMessageShown ->
+                _uiState.update { it.copy(userMessage = null) }
         }
     }
 
@@ -83,8 +81,13 @@ class GreetingViewModel @Inject constructor(
             val message = withContext(dispatcherProvider.default) {
                 greetingProvider.greetingFor(NAMES[nameIndex])
             }
-            _uiState.update { it.copy(message = message, isRefreshing = false) }
-            _effects.send(GreetingUiEffect.ShowMessage("Refreshed"))
+            _uiState.update {
+                it.copy(
+                    message = message,
+                    isRefreshing = false,
+                    userMessage = "Refreshed"
+                )
+            }
         }
     }
 }

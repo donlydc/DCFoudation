@@ -54,10 +54,16 @@ fun ArticlesRoute(
         )
     }
 
+    LaunchedEffect(uiState.userMessage) {
+        uiState.userMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.onAction(ArticlesUiAction.UserMessageShown)
+        }
+    }
+
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is ArticlesUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.text)
                 ArticlesUiEffect.LaunchNotificationPermissionRequest ->
                     permissionLauncher.launch(NotificationPermission.permissionName)
             }

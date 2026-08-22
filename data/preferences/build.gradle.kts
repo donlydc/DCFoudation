@@ -1,27 +1,15 @@
 plugins {
-    alias(libs.plugins.android.library)
+    id("dc.android.library")
+    id("dc.testing")
 }
 
 android {
     namespace = "com.dc.android.foundation.data.preferences"
-    compileSdk {
-        version = release(37)
-    }
-
-    defaultConfig {
-        minSdk = 24
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
 }
 
 dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.javax.inject)
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
 }

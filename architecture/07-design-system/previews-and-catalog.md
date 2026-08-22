@@ -10,7 +10,7 @@ How the design system is visually verified without a running app.
 
 `catalog/DesignSystemCatalog.kt`:
 
-- `DesignSystemCatalog()` — a plain `Column` exercising every current token/component (`DcText` + `DcButton`, `SpacingTokens.Small` between them, `SpacingTokens.Medium` padding).
+- `DesignSystemCatalog()` — a plain `Column` exercising text/button, feedback states, controlled inputs and the list-row component with tokenized spacing/padding.
 - `DesignSystemCatalogLightPreview` / `DesignSystemCatalogDarkPreview` — `@Preview` composables wrapping the catalog in `DcTheme(darkTheme = false/true, dynamicColor = false)`. `dynamicColor` is forced off in previews so they render the token-defined palette deterministically instead of whatever dynamic color the preview host happens to compute.
 
 This is a manual catalog, not a generated one — there is no Paparazzi/screenshot-test tooling yet (that belongs to Phase I, `17-testing.md`, if adopted at all).

@@ -8,6 +8,14 @@ import kotlinx.coroutines.flow.Flow
  * `app/.../greeting/GreetingPreferencesRepository.kt`).
  */
 interface PreferencesDataSource {
-    fun getInt(key: String, default: Int): Flow<Int>
-    suspend fun setInt(key: String, value: Int)
+    fun <T> observe(key: PreferenceKey<T>): Flow<T>
+    suspend fun <T> get(key: PreferenceKey<T>): T
+    suspend fun <T> set(key: PreferenceKey<T>, value: T)
+    suspend fun remove(key: PreferenceKey<*>)
+    suspend fun clear()
+    /**
+     * Applies related mutations atomically. The editor callback is deliberately non-suspending:
+     * storage implementations may hold their transaction lock while applying it (INV-05).
+     */
+    suspend fun edit(block: PreferencesEditor.() -> Unit)
 }

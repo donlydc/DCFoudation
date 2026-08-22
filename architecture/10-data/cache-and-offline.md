@@ -4,11 +4,11 @@
 
 ## Current implementation
 
-**Not implemented.** There is no remote source of truth yet, so there's nothing to cache and no offline/stale-data policy to define. `GreetingPreferencesRepository`'s DataStore-backed value is already durable local state, not a cache of something else.
+`ArticlesRepository` is the reference offline-first policy. Room is the observable source of truth, so cached rows render immediately. A refresh fetches remote data and upserts it into Room; failures leave cached rows untouched and return a failure status so presentation can show stale/offline feedback.
 
 ## Rules
 
-**DAT-CACHE-01 — Reserved.** No rule yet — will be defined against a real repository once one combines `RemoteDataSource` + `LocalDataSource`.
+**DAT-CACHE-01 — One repository owns remote/local coordination and stale policy.** UI/ViewModel do not merge sources or apply network responses directly; observing the local source reflects successful upserts automatically.
 
 ## Related documents
 

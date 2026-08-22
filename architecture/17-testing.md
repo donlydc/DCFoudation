@@ -8,14 +8,15 @@ Unit vs. Compose UI test boundaries, fakes, and the dispatcher rule every corout
 
 ## Current implementation
 
-- **Unit tests** (`app/src/test/`): `GreetingViewModelTest` (7 tests, JVM, run without a device) — covers `GreetingViewModel`'s state transitions, effect emission, and both restoration paths (`SavedStateHandle` and DataStore fallback). Uses `MainDispatcherRule` (`app/src/test/.../MainDispatcherRule.kt`) to swap `Dispatchers.Main` for a `StandardTestDispatcher`, and `FakeDispatcherProvider`/`FakeGreetingProvider`/`FakePreferencesDataSource`/`NoOpLogger` as hand-written fakes (no mocking framework — none is needed yet for this few collaborators).
+- **Shared `:testing` kit:** `MainDispatcherRule`, `FakeDispatcherProvider`, no-op/recording Logger, AnalyticsTracker and CrashReporter implementations. The module is consumed only through test configurations and keeps feature-specific builders/fakes in their owning tests.
+- **Unit tests** (`app/src/test/`): `GreetingViewModelTest` and `ArticlesViewModelTest` cover state transitions, message acknowledgement, restoration, offline-first behavior, analytics/crash calls and the permission-launch integration effect. Shared infrastructure fakes come from `:testing`; feature-specific API/DAO/provider fakes remain local. No mocking framework is required.
 - **Compose UI tests** (`app/src/androidTest/`): `GreetingScreenTest` (2 tests) — exercises the stateless `GreetingScreen` directly (no ViewModel/DI involved, per DI-03/UI-01), using `createComposeRule()`. **Requires a device/emulator**; not run as part of this project's automated verification in this environment (see `PLAN_REPORT.md`'s consolidated-verification entry for exactly what was and wasn't executed) — CI (`19-ci-release-quality-gates.md`) does not currently run `connectedAndroidTest` either, since there's no emulator/device runner configured. Flagged honestly rather than claimed as passing.
 
 ## Rules
 
 ### TST-01 — Every `*ViewModel` gets a matching unit test using `MainDispatcherRule`
 
-**Rule:** A ViewModel with `viewModelScope` coroutine work gets `app/src/test/.../<feature>/<Feature>ViewModelTest.kt`, `@get:Rule val mainDispatcherRule = MainDispatcherRule()`, and fakes (not mocks) for its dependencies unless a fake is genuinely impractical.
+**Rule:** A ViewModel with `viewModelScope` coroutine work gets a matching `<Feature>ViewModelTest`, `@get:Rule val mainDispatcherRule = MainDispatcherRule()` from `:testing`, shared infrastructure fakes where available, and feature-owned fakes (not mocks) for domain/data collaborators unless a fake is genuinely impractical.
 
 **Why:** Deterministic, fast, no device required (`20-feature-template.md`).
 

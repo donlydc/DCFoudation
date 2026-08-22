@@ -8,7 +8,7 @@ Window-size/adaptive-layout policy and accessibility floors (touch target, font 
 
 ## Current implementation
 
-- **Accessibility:** `tokens/AccessibilityTokens.kt` defines `MinTouchTarget` (48dp), enforced by `DcButton` (DS-02). Typography uses `sp` units throughout (`DcTypography`), so it scales with the user's system font-size setting automatically — no extra work needed for that. RTL: no directional (`start`/`end` vs `left`/`right`) layout logic exists yet to get wrong; `Modifier.padding(innerPadding)` from `Scaffold` is already RTL-safe by construction.
+- **Accessibility:** `tokens/AccessibilityTokens.kt` defines `MinTouchTarget` (48dp), enforced by interactive button/input/list-row components (DS-02). Loading and input errors expose screen-reader semantics; password visibility labels come from the caller for localization. Typography uses `sp` units throughout (`DcTypography`) and layouts use directional-safe Compose APIs.
 - **Adaptive/window-size:** Not implemented. The app is a single `Scaffold` with no layout that would differ across window-size classes. No `WindowSizeClass` dependency or breakpoint policy exists yet — will be added when a screen actually needs to branch on window size (Phase E+), not preemptively.
 
 ## Rules

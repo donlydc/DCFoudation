@@ -6,34 +6,37 @@
 
 Actual Gradle modules, package ownership, naming, and public vs internal surfaces. Does not own dependency-direction rules (see [`02-layers-and-dependencies.md`](02-layers-and-dependencies.md)).
 
-## Current implementation (verified, Phase A)
-
-Single Gradle module:
+## Current implementation (verified against source and `settings.gradle.kts`)
 
 ```text
 DCAndroidFoundation/
-├── app/                                    the only Gradle module (settings.gradle.kts: include(":app"))
-│   └── src/
-│       ├── main/java/com/dc/android/foundation/
-│       │   ├── MainActivity.kt             ComponentActivity, Greeting(), GreetingPreview()
-│       │   └── ui/theme/{Color,Type,Theme}.kt
-│       ├── main/res/                       standard drawable/mipmap/values/xml
-│       ├── test/java/.../ExampleUnitTest.kt
-│       └── androidTest/java/.../ExampleInstrumentedTest.kt
-├── architecture/                           this directory
-├── plan/                                   execution-plan seed package (plan/README_FIRST.md)
-├── graphify-out/                           generated, gitignored
-├── build.gradle.kts, settings.gradle.kts, gradle/
-└── CLAUDE.md, README.md, PLAN_REPORT.md
+├── foundation/                   Android-free shared contracts and primitives
+├── app/                         composition root, app shell, greeting/articles reference features
+├── ui/designsystem/             semantic Compose theme, tokens, components and catalog
+├── runtime/concurrency/         dispatcher contracts and implementations (plain Kotlin/JVM)
+├── runtime/background/          business-neutral WorkManager scheduling policy
+├── data/preferences/            DataStore-backed generic preferences boundary
+├── data/network/                Retrofit/OkHttp construction and network result boundary
+├── data/database/               Room database plus the reference articles schema
+├── platform/navigation/         DC-owned destination contracts
+├── platform/permission/         DC-owned permission state and notification permission adapter
+├── security/                    secure key/value storage contract and encrypted implementation
+├── observability/               logger, analytics and crash-reporting contracts/adapters
+├── testing/                     reusable dispatcher rules and infrastructure fakes for tests
+├── build-logic/                 included build with DC Gradle convention plugins
+├── architecture/                architecture authority and decision records
+├── plan/                        original execution-plan seed package
+└── graphify-out/                generated repository graph (gitignored)
 ```
 
-- `namespace` / `applicationId`: `com.dc.android.foundation` (from `app/build.gradle.kts`).
-- Root project name: `DC Android Foundation` (`settings.gradle.kts`; a stray `(` typo here was fixed in Phase A).
-- `compileSdk 37`, `minSdk 24`, `targetSdk 37`, Java 11 source/target compatibility, Compose enabled, no `kapt`/`ksp` plugin.
+- Application `namespace` / `applicationId`: `com.dc.android.foundation`.
+- Root project name: `DC Android Foundation`.
+- Android modules use compile/target SDK 37, min SDK 24 and Java 11 compatibility; KSP is used for Hilt/Room where needed.
+- `:app` depends one-way on reusable capability modules. Feature packages do not import one another's private implementation.
 
-## Target structure (not yet implemented)
+## Target structure and split policy
 
-Root [`CLAUDE.md`](../CLAUDE.md) §1 describes a target capability map (`foundation/`, `architecture/`, `ui/{designsystem,components,adaptive,resources}`, `data/{network,database,preferences,cache}`, `runtime/{concurrency,lifecycle,background}`, `platform/{navigation,permission,device,configuration}`, `security/`, `observability/`, `testing/`, `build-logic/`). Per that same document: *"Do not create all modules just because they appear in this target map. Create/split a module only when its boundary provides real dependency, ownership, reuse, testability, or build-value."* No module beyond `:app` exists today; modules will be introduced by the phase that actually needs them (Phase C onward), not created preemptively here.
+Root [`CLAUDE.md`](../CLAUDE.md) §1 describes a larger capability map. `:testing` now has a real reuse boundary, while `build-logic` is an included build rather than an application module. `ui/components`, `ui/adaptive`, `data/cache`, `runtime/lifecycle`, `platform/device`, and `platform/configuration` remain logical capabilities rather than automatic module requirements. Create another module only when it adds real dependency, ownership, reuse, testability, or build value.
 
 ## Rules
 

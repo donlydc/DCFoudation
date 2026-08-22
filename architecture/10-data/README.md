@@ -6,18 +6,20 @@
 
 ```text
 Repository (feature-owned mapping boundary, e.g. GreetingPreferencesRepository)
-  ├─ RemoteDataSource   — not implemented (no network need yet)
-  ├─ LocalDataSource    — PreferencesDataSource (DataStore), implemented
-  └─ Cache/offline policy — not implemented (nothing to cache yet)
+  ├─ RemoteDataSource     — ArticlesNetworkDataSource (Retrofit), implemented
+  ├─ LocalDataSource      — ArticleDao (Room) / PreferencesDataSource (DataStore), implemented
+  └─ Cache/offline policy — ArticlesRepository uses Room as source of truth
 ```
 
 A feature never talks to `DataStore`/`Room`/Retrofit directly — it goes through a repository that maps the generic data-source API onto the feature's own vocabulary (DAT-01, [`mapping-boundaries.md`](mapping-boundaries.md)).
 
-## Current implementation (Phase G)
+## Current implementation
 
-- `:data:preferences` — `PreferencesDataSource` (generic `getInt`/`setInt` contract) + `DataStorePreferencesDataSource` (real impl, catches `IOException` at the boundary per ERR-01).
+- `:data:preferences` — typed `PreferencesDataSource` keys and atomic editor API + `DataStorePreferencesDataSource` (real impl, versioned migrations, safe defaults and `IOException` handling at the boundary per ERR-01).
 - `app/.../greeting/GreetingPreferencesRepository` — the one repository that exists, wrapping `PreferencesDataSource` with a feature-specific key (`greeting_last_name_index`).
-- Room (`persistence-room.md`) and network (`network.md`) are **not implemented** — no feature needs structured local storage or a remote API yet.
+- `:data:network` provides business-neutral Retrofit/OkHttp construction and `NetworkResult`; `articles` owns its DTO/API/data-source mapping.
+- `:data:database` provides the current Room database and articles DAO/entity reference schema.
+- `ArticlesRepository` combines remote and local sources: Room emits cached data immediately; refresh upserts network results and preserves stale cache on failure.
 
 ## Related documents
 

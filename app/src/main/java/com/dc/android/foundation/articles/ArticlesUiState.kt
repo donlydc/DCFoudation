@@ -8,6 +8,8 @@ data class ArticlesUiState(
     val isRefreshing: Boolean = false,
     /** `true` when the last refresh failed and the list shown is cached/stale data (DAT-CACHE-01). */
     val isShowingStaleData: Boolean = false,
+    /** User-visible message retained until [ArticlesUiAction.UserMessageShown]. */
+    val userMessage: String? = null,
     /** `POST_NOTIFICATIONS` state for the sync worker's completion notification (PERM-01). */
     val notificationPermissionState: PermissionState = PermissionState.NotRequested
 )

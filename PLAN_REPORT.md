@@ -253,3 +253,40 @@ An Opus session was used for the planning/design of Phases M onward (implementin
 This brings the cumulative Opus escalation count for the whole project from **0 to 1**, which is within the plan's stated 0–1 target (Phase K, above, had already confirmed zero Opus escalations through Phases F–J).
 
 All subsequent implementation phases (M through S) use Sonnet per the normal `implementation-worker` routing. Phase T's consistency-check step uses Haiku per `consistency-checker` routing, mirroring Phase J's approach.
+
+## 2026-08-22 — P0 foundation acceleration batch
+
+**Execution model:** parallel work was split by implementation risk, then integrated and verified once at the root:
+
+- `gpt-5.6-sol` (high): Gradle included build, seven composable convention plugins, migration of all existing module scripts, then the safe `dc.feature.generator` plugin/task.
+- `gpt-5.6-terra` (high): Design System state/input/list components and catalog previews.
+- `gpt-5.6-luna` (high): shared `:testing` module, dispatcher rule/provider, and no-op/recording observability fakes.
+- root integration: `:testing` dependency wiring, durable UI-message policy, generator corrections/spec verification, architecture/roadmap synchronization, and consolidated quality gate.
+
+Implemented outcomes:
+
+- Added `build-logic/` with `dc.android.application`, `dc.android.library`, `dc.kotlin.jvm`, `dc.compose`, `dc.hilt`, `dc.room`, and `dc.testing`; all 12 application/library modules now consume capability-specific conventions.
+- Added `dc.feature.generator` and enabled it in `:app`. `:app:createFeature` generates the canonical state/action/ViewModel/Route/Screen/Preview/test set, supports explicit optional capability flags, validates names/packages, preflights collisions, and never overwrites files.
+- Added `:testing`; app ViewModel tests now reuse `MainDispatcherRule`, `FakeDispatcherProvider`, and observability fakes. Test-only helpers were removed from production/app-local locations.
+- Added `DcLoadingState`, `DcEmptyState`, `DcErrorState`, `DcOfflineBanner`, `DcTextField`, `DcPasswordTextField`, and `DcListRow`, with catalog coverage.
+- Replaced ViewModel-originated message channels with durable `UiState.userMessage` plus acknowledgement actions. `ArticlesUiEffect` remains only for the immediate OS permission launcher; `GreetingUiEffect` was removed.
+- Updated architecture documents and `BASE_PROJECT_ROADMAP.md` to the verified 12-module implementation. P0 error classification/localized message mapping remains explicitly deferred until network hardening supplies enough real failure categories for a stable contract.
+
+Executed verification:
+
+```text
+./gradlew -p build-logic test
+  -> BUILD SUCCESSFUL (4 generator tests)
+
+./gradlew :testing:testDebugUnitTest :ui:designsystem:compileDebugKotlin \
+  :app:testDebugUnitTest :app:compileDebugKotlin
+  -> BUILD SUCCESSFUL (190 tasks)
+
+./gradlew testDebugUnitTest lintDebug assembleDebug
+  -> BUILD SUCCESSFUL (520 tasks, 310 executed)
+
+git diff --check
+  -> PASS (only Windows LF/CRLF conversion notices)
+```
+
+Graphify was used as the repository navigation layer through the existing `graphify-out/graph.json`; the installed Graphify skill's required final `graphify update .` could not run because the `graphify` CLI is absent from PATH (`GRAPHIFY_CLI_MISSING`). AgentMemory discipline was loaded, but this session exposed no callable recall/save tool, so no memory mutation was claimed.

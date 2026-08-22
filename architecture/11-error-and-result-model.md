@@ -8,7 +8,13 @@ How infrastructure exceptions get mapped before they cross into presentation.
 
 ## Current implementation
 
-No generic `Resource<T>`/`Result<T>` wrapper exists — per the plan ("do not force every operation into one generic `Resource<T>` if feature state is more expressive"), `GreetingUiState` just doesn't have an error case yet because nothing user-visible can currently fail: `DataStorePreferencesDataSource.getInt` catches `IOException` at the data-source boundary and falls back to `emptyPreferences()` (→ the caller's `default`) instead of throwing, so `GreetingViewModel` never sees an exception to handle.
+No application-wide generic `Resource<T>` wrapper exists — feature state remains more expressive than a universal loading/success/error envelope.
+
+- `DataStorePreferencesDataSource` catches expected read `IOException` at its boundary and emits empty preferences, so callers receive their declared default.
+- `safeApiCall` maps expected `IOException`/Retrofit `HttpException` failures into `NetworkResult.Failure(AppError)`; unexpected/programming failures are rethrown.
+- `ArticlesRepository` keeps Room as source of truth, records refresh failures, preserves cached rows, and returns a success flag. `ArticlesViewModel` converts that outcome into durable `UiState` (`isShowingStaleData` plus `userMessage`) rather than exposing infrastructure exceptions or a transient message channel.
+
+`:foundation` owns the intentionally small shared `AppError` vocabulary (`Connectivity`, `Http`, `Serialization`, `Unknown`) and `Retryable`. Feature-specific localized messages remain in feature presentation state; do not invent a generic `UiMessage` mapping in the generator before a real cross-feature policy requires one.
 
 ## Rules
 
@@ -18,11 +24,11 @@ No generic `Resource<T>`/`Result<T>` wrapper exists — per the plan ("do not fo
 
 **Why:** Keeps infra exception types out of presentation-layer code (DEP-04, INV-07).
 
-**Verification:** `DataStorePreferencesDataSource.getInt` — `.catch { cause -> if (cause is IOException) emit(emptyPreferences()) else throw cause }`. `grep 'catch.*IOException'` should only ever appear in `*DataSource` classes.
+**Verification:** Inspect `DataStorePreferencesDataSource` and `safeApiCall`; presentation code has no Retrofit, Room, SQL, or I/O exception imports.
 
 ## Testing / validation
 
-No test yet exercises the catch branch (would need to inject a failing `DataStore`) — flagged here rather than silently skipped; add one the day a second data source's failure mode actually needs verifying.
+`NetworkResultTest` covers success, I/O failure, HTTP failure, and unexpected exception propagation. `ArticlesViewModelTest` covers durable refresh-success/failure messages and acknowledgement. A failing-DataStore test is still pending because the current implementation does not inject a replaceable DataStore read source.
 
 ## Related documents
 

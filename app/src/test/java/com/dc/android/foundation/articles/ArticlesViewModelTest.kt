@@ -1,15 +1,16 @@
 package com.dc.android.foundation.articles
 
 import androidx.lifecycle.SavedStateHandle
-import com.dc.android.foundation.MainDispatcherRule
+import com.dc.android.foundation.core.AppError
 import com.dc.android.foundation.data.database.ArticleDao
 import com.dc.android.foundation.data.database.ArticleEntity
 import com.dc.android.foundation.data.network.NetworkResult
-import com.dc.android.foundation.observability.AnalyticsTracker
-import com.dc.android.foundation.observability.CrashReporter
-import com.dc.android.foundation.observability.Logger
 import com.dc.android.foundation.platform.permission.PermissionState
-import com.dc.android.foundation.runtime.concurrency.FakeDispatcherProvider
+import com.dc.android.foundation.testing.FakeDispatcherProvider
+import com.dc.android.foundation.testing.MainDispatcherRule
+import com.dc.android.foundation.testing.NoOpLogger
+import com.dc.android.foundation.testing.RecordingAnalyticsTracker
+import com.dc.android.foundation.testing.RecordingCrashReporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -36,8 +37,8 @@ class ArticlesViewModelTest {
     private fun createViewModel(
         dao: FakeArticleDao = FakeArticleDao(),
         networkDataSource: FakeArticlesNetworkDataSource = FakeArticlesNetworkDataSource(),
-        crashReporter: FakeCrashReporter = FakeCrashReporter(),
-        analyticsTracker: FakeAnalyticsTracker = FakeAnalyticsTracker()
+        crashReporter: RecordingCrashReporter = RecordingCrashReporter(),
+        analyticsTracker: RecordingAnalyticsTracker = RecordingAnalyticsTracker()
     ) = ArticlesViewModel(
         ArticlesRepository(networkDataSource, dao, crashReporter),
         fakeDispatcherProvider,
@@ -85,22 +86,24 @@ class ArticlesViewModelTest {
                 listOf(ArticleDto(id = 2, userId = 5, title = "Fresh", body = "Body"))
             )
         )
-        val analyticsTracker = FakeAnalyticsTracker()
+        val analyticsTracker = RecordingAnalyticsTracker()
         val viewModel = createViewModel(networkDataSource = networkDataSource, analyticsTracker = analyticsTracker)
 
         viewModel.onAction(ArticlesUiAction.Refresh)
         advanceUntilIdle()
 
-        assertEquals(1, analyticsTracker.trackedEvents.size)
-        assertEquals("articles_refreshed", analyticsTracker.trackedEvents.single().first)
+        assertEquals(1, analyticsTracker.events.size)
+        assertEquals("articles_refreshed", analyticsTracker.events.single().name)
     }
 
     @Test
     fun `Refresh failure records the exception with the crash reporter and does not track analytics`() = runTest {
         val failure = java.io.IOException("offline")
-        val networkDataSource = FakeArticlesNetworkDataSource(result = NetworkResult.Failure(failure))
-        val crashReporter = FakeCrashReporter()
-        val analyticsTracker = FakeAnalyticsTracker()
+        val networkDataSource = FakeArticlesNetworkDataSource(
+            result = NetworkResult.Failure(AppError.Connectivity(failure))
+        )
+        val crashReporter = RecordingCrashReporter()
+        val analyticsTracker = RecordingAnalyticsTracker()
         val viewModel = createViewModel(
             networkDataSource = networkDataSource,
             crashReporter = crashReporter,
@@ -111,7 +114,7 @@ class ArticlesViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf(failure), crashReporter.recordedExceptions)
-        assertTrue(analyticsTracker.trackedEvents.isEmpty())
+        assertTrue(analyticsTracker.events.isEmpty())
     }
 
     @Test
@@ -120,7 +123,7 @@ class ArticlesViewModelTest {
             initial = listOf(ArticleEntity(id = 1, authorId = 1, title = "Cached", body = "Body", fetchedAt = 0L))
         )
         val networkDataSource = FakeArticlesNetworkDataSource(
-            result = NetworkResult.Failure(java.io.IOException("offline"))
+            result = NetworkResult.Failure(AppError.Connectivity(java.io.IOException("offline")))
         )
         val viewModel = createViewModel(dao = dao, networkDataSource = networkDataSource)
 
@@ -134,23 +137,22 @@ class ArticlesViewModelTest {
     }
 
     @Test
-    fun `Refresh failure emits a ShowMessage effect describing the stale state`() = runTest {
+    fun `Refresh failure exposes a user message until acknowledged`() = runTest {
         val networkDataSource = FakeArticlesNetworkDataSource(
-            result = NetworkResult.Failure(java.io.IOException("offline"))
+            result = NetworkResult.Failure(AppError.Connectivity(java.io.IOException("offline")))
         )
         val viewModel = createViewModel(networkDataSource = networkDataSource)
-        val effects = mutableListOf<ArticlesUiEffect>()
-        val collector = launch { viewModel.effects.toList(effects) }
-
         viewModel.onAction(ArticlesUiAction.Refresh)
         advanceUntilIdle()
 
-        assertEquals(1, effects.size)
         assertEquals(
             "Refresh failed, showing cached data",
-            (effects.single() as ArticlesUiEffect.ShowMessage).text
+            viewModel.uiState.value.userMessage
         )
-        collector.cancel()
+
+        viewModel.onAction(ArticlesUiAction.UserMessageShown)
+
+        assertEquals(null, viewModel.uiState.value.userMessage)
     }
 
     @Test
@@ -176,32 +178,6 @@ class ArticlesViewModelTest {
         advanceUntilIdle()
 
         assertEquals(PermissionState.Granted, viewModel.uiState.value.notificationPermissionState)
-    }
-}
-
-private object NoOpLogger : Logger {
-    override fun d(tag: String, message: String) = Unit
-    override fun e(tag: String, message: String, throwable: Throwable?) = Unit
-}
-
-private class FakeCrashReporter : CrashReporter {
-    val recordedExceptions = mutableListOf<Throwable>()
-    val loggedMessages = mutableListOf<String>()
-
-    override fun recordException(throwable: Throwable) {
-        recordedExceptions += throwable
-    }
-
-    override fun log(message: String) {
-        loggedMessages += message
-    }
-}
-
-private class FakeAnalyticsTracker : AnalyticsTracker {
-    val trackedEvents = mutableListOf<Pair<String, Map<String, String>>>()
-
-    override fun trackEvent(name: String, properties: Map<String, String>) {
-        trackedEvents += name to properties
     }
 }
 

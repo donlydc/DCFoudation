@@ -1,23 +1,8 @@
 plugins {
-    alias(libs.plugins.android.library)
+    id("dc.android.library")
+    id("dc.testing")
 }
 
 android {
     namespace = "com.dc.android.foundation.observability"
-    compileSdk {
-        version = release(37)
-    }
-
-    defaultConfig {
-        minSdk = 24
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-}
-
-dependencies {
-    testImplementation(libs.junit)
 }

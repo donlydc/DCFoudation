@@ -48,7 +48,7 @@ class ArticlesRepository @Inject constructor(
                 // Already-existing ERR-01 error boundary (NetworkResult.Failure) — recording the
                 // exception here is an observability side-effect only, it does not change the
                 // boundary's contract (refresh() still just returns false).
-                crashReporter.recordException(result.throwable)
+                result.error.cause?.let(crashReporter::recordException)
                 false
             }
         }

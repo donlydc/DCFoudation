@@ -7,7 +7,7 @@
 
 ## Status
 
-This tree is populated phase-by-phase per [`../plan/CLAUDE_IMPLEMENTATION_PLAN.md`](../plan/CLAUDE_IMPLEMENTATION_PLAN.md). As of Phase I, only the documents below exist. A topic-routing row pointing at a not-yet-created file means that phase hasn't run yet — check [`../PLAN_REPORT.md`](../PLAN_REPORT.md) for current progress, do not invent the content.
+This tree began as a phase-by-phase implementation plan and is now a living description of the verified source. Check [`../PLAN_REPORT.md`](../PLAN_REPORT.md) and [`../BASE_PROJECT_ROADMAP.md`](../BASE_PROJECT_ROADMAP.md) for historical progress and the current P0–P2 backlog. A document must distinguish implemented behavior from optional/target behavior.
 
 | Document | Status |
 |---|---|
@@ -16,21 +16,21 @@ This tree is populated phase-by-phase per [`../plan/CLAUDE_IMPLEMENTATION_PLAN.m
 | `03-project-structure.md` | done (Phase B) |
 | `04-app-bootstrap-and-lifecycle.md` | done (Phase E) |
 | `05-presentation-udf.md` | done (Phase E) |
-| `06-navigation.md` | done (Phase E, marked not-implemented) |
-| `07-design-system/*` (9 files) | done (Phase C) |
+| `06-navigation.md` | implemented (type-safe top-level Navigation Compose) |
+| `07-design-system/*` (9 files) | implemented tokens/theme plus P0 state, input and list components |
 | `08-dependency-injection-hilt.md` | done (Phase D) |
 | `09-concurrency-and-threading.md` | done (Phase F) |
-| `10-data/*` (7 files) | done (Phase G; network/persistence-room/cache-and-offline marked not-implemented) |
+| `10-data/*` (7 files) | implemented reference paths for DataStore, Retrofit, Room and offline-first cache |
 | `11-error-and-result-model.md` | done (Phase H) |
-| `12-security-and-session.md` | done (Phase H, mostly not-implemented) |
-| `13-permissions.md` | done (Phase H, marked not-implemented) |
-| `14-background-work.md` | done (Phase F, marked not-implemented) |
-| `15-observability/*` (4 files) | done (Phase H; analytics/crash-and-performance marked not-implemented) |
+| `12-security-and-session.md` | secure storage implemented; auth/session flow remains optional |
+| `13-permissions.md` | notification permission path implemented |
+| `14-background-work.md` | periodic WorkManager sync reference implemented |
+| `15-observability/*` (4 files) | logging/analytics/crash contracts implemented; vendor/performance tracing optional |
 | `16-config-feature-flags-environments.md` | done (Phase H) |
-| `17-testing.md` | done (Phase I) |
-| `18-build-logic-and-dependencies.md` | done (Phase I) |
+| `17-testing.md` | implemented shared `:testing` kit plus feature/module tests |
+| `18-build-logic-and-dependencies.md` | implemented conventions and safe feature generator |
 | `19-ci-release-quality-gates.md` | done (Phase I) |
-| `20-feature-template.md` | done (Phase E) |
+| `20-feature-template.md` | implemented template plus `createFeature` generator |
 | `21-coding-rules.md` | done (Phase I) |
 | `22-known-deviations.md` | living document, updated every phase |
 | `23-decision-log.md` | living document, updated every phase |

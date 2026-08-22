@@ -6,9 +6,9 @@
 
 A reusable Android base (DC Android Foundation) intended to provide architecture, runtime/platform abstractions, engineering conventions, and a coherent Compose design system without embedding application-specific business models. The goal is not one app — it is a stable base other DC Android projects can depend on and extend.
 
-## Current implementation state (verified — see `PLAN_REPORT.md` Phase A)
+## Current implementation state (verified against source and `settings.gradle.kts`)
 
-As of Phase F/G (see `settings.gradle.kts`), the repository has a 4-module split: `:app`, `:ui:designsystem`, `:runtime:concurrency`, and `:data:preferences`. Hilt (constructor injection + `@Module`/`@InstallIn` bindings, see `app/src/main/java/com/dc/android/foundation/di/*.kt`) and DataStore (`DataStoreModule.kt`) are both in real use; Room/Retrofit/WorkManager/Navigation are not yet present. Every invariant below states the **target** rule; several still describe behavior that is only partially realized and will only become fully checkable once the corresponding later phase has run. This document will be re-verified, not rewritten, as each phase lands.
+The repository currently has 13 Gradle modules: `:foundation`, `:app`, `:ui:designsystem`, `:runtime:{concurrency,background}`, `:data:{preferences,network,database}`, `:platform:{navigation,permission}`, `:security`, `:observability`, and the test-only `:testing` kit. Hilt and `:app` form the composition root. The two reference features prove both a small local flow (`greeting`) and an offline-first flow (`articles`) using type-safe Navigation Compose, Retrofit/OkHttp, Room, WorkManager, notification permission, secure-storage/observability contracts, DataStore, and shared deterministic test infrastructure. The invariants below remain the authority for both implemented and future capabilities; optional extension points must still be labeled honestly rather than presented as finished behavior.
 
 ## Invariants
 

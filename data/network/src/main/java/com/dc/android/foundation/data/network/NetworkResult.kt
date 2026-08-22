@@ -1,5 +1,6 @@
 package com.dc.android.foundation.data.network
 
+import com.dc.android.foundation.core.AppError
 import java.io.IOException
 import retrofit2.HttpException
 
@@ -16,19 +17,25 @@ import retrofit2.HttpException
  */
 sealed interface NetworkResult<out T> {
     data class Success<T>(val data: T) : NetworkResult<T>
-    data class Failure(val throwable: Throwable) : NetworkResult<Nothing>
+    data class Failure(val error: AppError) : NetworkResult<Nothing>
 }
 
 /**
  * Runs [block] and maps it to a [NetworkResult] at the data-source boundary (ERR-01):
- * [IOException] (no connectivity, timeout, etc.) and [HttpException] (non-2xx response) are the
- * expected/anticipated failure modes for a network call and are caught here; anything else is an
+ * [IOException] and [HttpException] are the expected/anticipated failure modes for a network call
+ * and are mapped to the stable [AppError] vocabulary here. Anything else is an
  * unexpected/programming-error condition and is rethrown rather than silently swallowed.
  */
 suspend fun <T> safeApiCall(block: suspend () -> T): NetworkResult<T> = try {
     NetworkResult.Success(block())
 } catch (cause: IOException) {
-    NetworkResult.Failure(cause)
+    NetworkResult.Failure(AppError.Connectivity(cause))
 } catch (cause: HttpException) {
-    NetworkResult.Failure(cause)
+    NetworkResult.Failure(
+        AppError.Http(
+            code = cause.code(),
+            serverMessage = cause.message(),
+            cause = cause
+        )
+    )
 }

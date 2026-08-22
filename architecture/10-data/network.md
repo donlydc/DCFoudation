@@ -4,11 +4,11 @@
 
 ## Current implementation
 
-**Not implemented.** No feature calls a remote API. No Retrofit/OkHttp/kotlinx-serialization dependency exists. Adding one now would be exactly the kind of speculative capability the anti-overengineering constraint forbids (`plan/CLAUDE_IMPLEMENTATION_PLAN.md` §7) — it would be added when a real endpoint exists to call.
+`:data:network` owns business-neutral Retrofit/OkHttp construction, Kotlin serialization configuration, debug-only BASIC HTTP logging, and `NetworkResult`/`safeApiCall`. The `articles` feature owns `ArticlesApiService`, DTOs and `ArticlesNetworkDataSource`; expected I/O/HTTP failures are mapped before they reach the repository or ViewModel.
 
 ## Rules
 
-**DAT-NET-01 — Reserved.** No rule yet.
+**DAT-NET-01 — Feature API/DTO types stay feature-owned; generic client policy stays in `:data:network`.** A feature data source is the only feature type that calls its Retrofit service and maps expected infrastructure failures to `NetworkResult`.
 
 ## Related documents
 
