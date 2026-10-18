@@ -1,5 +1,7 @@
 package com.dc.android.foundation.designsystem.components
 
+import androidx.compose.ui.res.stringResource
+import com.dc.android.foundation.designsystem.R
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
@@ -17,7 +19,7 @@ fun DcSearchBar(
     label: String,
     modifier: Modifier = Modifier,
     onSearch: () -> Unit = {},
-    clearLabel: String = "Clear",
+    clearLabel: String = stringResource(R.string.dc_clear),
     enabled: Boolean = true
 ) {
     DcTextField(

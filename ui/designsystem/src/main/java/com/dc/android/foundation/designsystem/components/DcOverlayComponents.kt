@@ -1,5 +1,7 @@
 package com.dc.android.foundation.designsystem.components
 
+import androidx.compose.ui.res.stringResource
+import com.dc.android.foundation.designsystem.R
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -89,7 +91,7 @@ fun DcConfirmDialog(
     onConfirm: () -> Unit,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    dismissLabel: String = "Cancel",
+    dismissLabel: String = stringResource(R.string.dc_cancel),
     isProcessing: Boolean = false,
     destructive: Boolean = false,
     icon: ImageVector? = null
@@ -280,6 +282,23 @@ private fun DcErrorDialogPreview() {
             onDismiss = {}
         )
     }
+}
+
+/** Semantic skeleton heights. */
+enum class DcSkeletonSize(internal val dp: Dp) {
+    Line(16.dp),
+    Title(24.dp),
+    Block(96.dp)
+}
+
+/** Skeleton using a semantic height; prefer this over the [Dp] overload. */
+@Composable
+fun DcSkeleton(
+    size: DcSkeletonSize,
+    modifier: Modifier = Modifier,
+    animated: Boolean = true
+) {
+    DcSkeleton(modifier = modifier, height = size.dp, animated = animated)
 }
 
 /**

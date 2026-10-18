@@ -209,6 +209,8 @@ fun DesignSystemCatalog(modifier: Modifier = Modifier) {
             DcSnackbarEffect(null, snackbarHostState, {})
         }
 
+        ExtendedCatalogSections()
+
         SpacingAndShapeSection()
     }
 
@@ -230,7 +232,7 @@ fun DesignSystemCatalog(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun CatalogSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+internal fun CatalogSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(LocalDcSpacing.current.component)) {
         DcSectionHeader(title)
         content()

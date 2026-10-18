@@ -33,6 +33,14 @@ fun DcAsyncImage(
     )
 }
 
+/** Semantic avatar sizes so feature UI does not pass free-form dimensions. */
+enum class DcAvatarSize(internal val dp: Dp) {
+    Small(32.dp),
+    Medium(40.dp),
+    Large(56.dp),
+    XLarge(80.dp)
+}
+
 /** Circular avatar with an initial fallback visible while an image is unavailable. */
 @Composable
 fun DcAvatar(
@@ -40,7 +48,19 @@ fun DcAvatar(
     modifier: Modifier = Modifier,
     imageModel: Any? = null,
     contentDescription: String? = name,
-    size: Dp = 40.dp
+    size: DcAvatarSize
+) {
+    DcAvatar(name, modifier, imageModel, contentDescription, size.dp)
+}
+
+/** Circular avatar with an initial fallback visible while an image is unavailable. */
+@Composable
+fun DcAvatar(
+    name: String,
+    modifier: Modifier = Modifier,
+    imageModel: Any? = null,
+    contentDescription: String? = name,
+    size: Dp = DcAvatarSize.Medium.dp
 ) {
     Box(
         modifier = modifier

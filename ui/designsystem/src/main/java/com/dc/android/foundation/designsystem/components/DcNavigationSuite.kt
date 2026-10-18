@@ -15,7 +15,9 @@ data class DcNavigationItem(
     val id: String,
     val label: String,
     val icon: ImageVector,
-    val contentDescription: String = label
+    val contentDescription: String = label,
+    /** Unread/pending count; null or 0 shows no badge. */
+    val badgeCount: Int? = null
 )
 
 /**
@@ -63,7 +65,16 @@ fun DcNavigationSuite(
                 item(
                     selected = item.id == selected.id,
                     onClick = { onSelect(item) },
-                    icon = { DcIcon(item.icon, item.contentDescription) },
+                    icon = {
+                        val count = item.badgeCount
+                        if (count != null && count > 0) {
+                            DcBadgedBox(badge = { DcBadge(count = count) }) {
+                                DcIcon(item.icon, item.contentDescription)
+                            }
+                        } else {
+                            DcIcon(item.icon, item.contentDescription)
+                        }
+                    },
                     label = {
                         DcText(
                             text = item.label,

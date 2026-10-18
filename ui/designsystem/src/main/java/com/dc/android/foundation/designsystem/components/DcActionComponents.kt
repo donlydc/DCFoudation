@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -120,4 +122,53 @@ fun DcExtendedFab(
         onClick = onClick,
         modifier = modifier.defaultMinSize(minHeight = AccessibilityTokens.MinTouchTarget)
     )
+}
+
+/**
+ * Icon-only toggle (favorite, bookmark, mute). [contentDescription] names the action target and
+ * stays constant; the checked state is exposed through toggle semantics and the icon swap.
+ */
+@Composable
+fun DcIconToggleButton(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    checkedIcon: ImageVector,
+    uncheckedIcon: ImageVector,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    variant: DcIconButtonVariant = DcIconButtonVariant.Standard
+) {
+    val targetModifier = modifier.defaultMinSize(
+        minWidth = AccessibilityTokens.MinTouchTarget,
+        minHeight = AccessibilityTokens.MinTouchTarget
+    )
+    val icon: @Composable () -> Unit = {
+        DcIcon(
+            imageVector = if (checked) checkedIcon else uncheckedIcon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+    if (variant == DcIconButtonVariant.Standard) {
+        IconToggleButton(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = targetModifier,
+            enabled = enabled,
+            colors = IconButtonDefaults.iconToggleButtonColors(
+                checkedContentColor = MaterialTheme.colorScheme.primary
+            ),
+            content = icon
+        )
+    } else {
+        FilledTonalIconToggleButton(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = targetModifier,
+            enabled = enabled,
+            shape = MaterialTheme.shapes.medium,
+            content = icon
+        )
+    }
 }

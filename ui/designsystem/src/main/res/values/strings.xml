@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default localized labels for Design System components. Callers may always override. -->
+    <string name="dc_cancel">Cancel</string>
+    <string name="dc_retry">Retry</string>
+    <string name="dc_loading">Loading</string>
+    <string name="dc_back">Back</string>
+    <string name="dc_clear">Clear</string>
+    <string name="dc_close">Close</string>
+    <string name="dc_dismiss">Dismiss</string>
+    <string name="dc_more_options">More options</string>
+    <string name="dc_nothing_here_yet">Nothing here yet</string>
+    <string name="dc_could_not_load_content">Could not load content</string>
+    <string name="dc_end_of_list">You have reached the end</string>
+    <string name="dc_increase">Increase</string>
+    <string name="dc_decrease">Decrease</string>
+    <string name="dc_expanded">Expanded</string>
+    <string name="dc_collapsed">Collapsed</string>
+    <string name="dc_select_all">Select all</string>
+    <string name="dc_ok">OK</string>
+    <string name="dc_select_date">Select date</string>
+    <string name="dc_select_time">Select time</string>
+    <string name="dc_page_indicator">Page %1$d of %2$d</string>
+    <string name="dc_character_counter">%1$d of %2$d characters</string>
+    <string name="dc_badge_count_overflow">%1$d+</string>
+    <string name="dc_digit_of_code">Digit %1$d of %2$d</string>
+</resources>

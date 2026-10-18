@@ -8,7 +8,7 @@ Animation duration/easing policy.
 
 ## Current implementation
 
-`tokens/MotionTokens.kt` defines three duration constants (`DURATION_SHORT_MS` 150, `DURATION_MEDIUM_MS` 300, `DURATION_LONG_MS` 500). **Not yet used anywhere** — no animation exists in the app yet, so there is no easing-curve policy to document. This is intentionally left as "not implemented" per INV-10 rather than inventing an easing spec no component uses.
+`tokens/MotionTokens.kt` defines three duration constants (`DURATION_SHORT_MS` 150, `DURATION_MEDIUM_MS` 300, `DURATION_LONG_MS` 500). `DcExpandableSection` is the first user: chevron rotation and expand/shrink use `DURATION_MEDIUM_MS` (fade-out uses `DURATION_SHORT_MS`) with Compose's default easing. Compose animations respect the system "Remove animations" setting automatically; `DcSkeleton(animated = false)` is the explicit opt-out. No custom easing curve is defined yet, per INV-10.
 
 ## Rules
 

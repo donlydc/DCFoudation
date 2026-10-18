@@ -8,6 +8,18 @@ Durable decisions with date, context, decision, alternatives, consequences, affe
 
 ## Entries
 
+### DEC-08 — 2026-10-18 — Extend the DS widget set with module-owned string defaults and typed models
+
+**Context:** Common widgets (menus, tabs, badges, forms, snackbar, selection groups) were missing, and several components hard-coded English default labels.
+
+**Decision:** Add the widgets described in `07-design-system/component-roadmap.md` (W0–W3) inside `:ui:designsystem`; keep one module. Default labels move to `res/values/strings.xml` (`dc_*`) and remain overridable. Choices use `DcOption<T>`/`DcMenuItem`; sizes use enums (`DcAvatarSize`, `DcSkeletonSize`, `DcProgressSize`); snackbars use `DcSnackbarMessage` instead of Material `SnackbarData`. Existing `Dp`-based `DcAvatar`/`DcSkeleton` overloads stay for source compatibility.
+
+**Alternatives considered:** Split `:ui:components`; keep literal English defaults; expose Material state types.
+
+**Consequences:** Public API is additive. Time field, list-detail scaffold, swipe rows and other W4 items stay deferred until a real consumer exists (DEC-04). Screenshot testing remains undecided.
+
+**Affected:** `ui/designsystem/**`, DS-01..04, INV-08, INV-10.
+
 ### DEC-07 — 2026-09-05 — Separate appearance persistence from Android locale ownership
 
 **Context:** Applications need common controls for theme, interface size, dynamic color and language. Persisting all four in custom DataStore state would duplicate Android's per-app locale source of truth; globally overriding Compose density would also interfere with accessibility and responsive breakpoints.

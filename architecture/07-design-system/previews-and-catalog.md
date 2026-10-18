@@ -8,9 +8,9 @@ How the design system is visually verified without a running app.
 
 ## Current implementation
 
-`catalog/DesignSystemCatalog.kt` is organized as fourteen visual checks:
+`catalog/DesignSystemCatalog.kt` is organized as twenty visual checks:
 
-- color roles; typography; buttons; fields; app bars; adaptive navigation; drawer; icon buttons; cards/lists; chips; dialogs; sheet/layout; states; and spacing/shapes.
+- color roles; typography; buttons; fields; app bars; adaptive navigation; drawer; icon buttons; cards/lists; chips; dialogs; sheet/layout; states; and spacing/shapes, followed by `ExtendedCatalog.kt` sections 15–20 (menus/sheets, selection, forms, feedback, badges/tabs/toggles, layout/lists).
 - `DesignSystemCatalog()` remains scrollable and runnable; the debug app exposes it as a navigation destination.
 - `DcThemePreviews`, `DcFontScalePreviews`, and `DcWindowPreviews` eliminate repeated preview boilerplate for color, scale and width coverage. The catalog uses `DcTheme`'s deterministic default (`dynamicColor = false`).
 

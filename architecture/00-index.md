@@ -17,7 +17,7 @@ This tree began as a phase-by-phase implementation plan and is now a living desc
 | `04-app-bootstrap-and-lifecycle.md` | done (Phase E) |
 | `05-presentation-udf.md` | done (Phase E) |
 | `06-navigation.md` | implemented (type-safe top-level Navigation Compose) |
-| `07-design-system/*` (10 files) | implemented tokens/theme, reusable components and common screen patterns |
+| `07-design-system/*` (11 files, incl. `component-roadmap.md` (W0–W3 implemented)) | implemented tokens/theme, reusable components and common screen patterns |
 | `08-dependency-injection-hilt.md` | done (Phase D) |
 | `09-concurrency-and-threading.md` | done (Phase F) |
 | `10-data/*` (7 files) | implemented reference paths for DataStore, Retrofit, Room and offline-first cache |

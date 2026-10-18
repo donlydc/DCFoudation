@@ -22,6 +22,14 @@ The component set covers policies repeated by both current and expected referenc
 - **`DcOfflineBanner`** — semantic error-container connectivity feedback with optional action content.
 - **`DcListRow`** — standard list item; when clickable it applies button semantics and the touch-target floor.
 
+- **Menus & sheets (W1/W3)** — `DcDropdownMenu`, `DcOverflowMenu`, `DcTooltip`, `DcActionSheet`, `DcSelectionSheet`. Menu entries are `DcMenuItem`; destructive items use error color plus text.
+- **Selection (W1/W2)** — `DcSegmentedButton`/`DcMultiSegmentedButton`, `DcRadioGroup`, `DcCheckboxGroup` (tri-state select-all), `DcChipGroup` (`DcSelectionMode`, wrap/scroll), typed `DcDropdownField` overload. Typed choices use `DcOption<T>`; toggle policy is the pure `toggleSelection`.
+- **Forms (W2)** — `DcTextArea`, `DcFormSection`, `DcStepper`, `DcSlider`/`DcRangeSlider`, `DcOtpField`, `DcDateField` + `DcDatePickerDialog` (`java.time`; the caller formats dates). `DcTextField` gained additive `maxLength`/counter/`minLines`/`maxLines`.
+- **Feedback (W1)** — `DcInlineMessage` (tone banner), `DcLinearProgress`/`DcCircularProgress`, `DcSnackbarHostState`/`DcSnackbarHost`/`DcSnackbarMessage` and a `DcSnackbarEffect` overload; Material `SnackbarData` is not exposed.
+- **Badges, tabs, toggles** — `DcBadge`/`DcBadgedBox` (`DcNavigationItem.badgeCount`), `DcTabRow`, `DcIconToggleButton`, `DcPageIndicator`, `DcAvatarSize`.
+- **Layout & lists** — `DcContentContainer` (width cap), `DcAdaptiveGrid`, `DcListAppendState`, `DcExpandableSection`, `DcButtonRow`, `DcSkeletonListRow`/`DcSkeletonCard`, `DcSkeletonSize`; `DcScaffold` accepts `floatingActionButton`.
+- **Default strings** — user-visible defaults come from `ui/designsystem/src/main/res/values/strings.xml` (`dc_*`); callers can still override every label.
+
 New components still require a real shared policy (theme, spacing, accessibility or interaction). Do not wrap a Material component only to rename it.
 
 ## Rules

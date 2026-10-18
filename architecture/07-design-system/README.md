@@ -65,4 +65,5 @@ Read only the subdocument for the concern being changed.
 ## Related documents
 
 - [`tokens.md`](tokens.md), [`semantic-theme.md`](semantic-theme.md), [`typography.md`](typography.md), [`spacing-shapes-elevation.md`](spacing-shapes-elevation.md), [`components.md`](components.md), [`common-screen-patterns.md`](common-screen-patterns.md), [`motion.md`](motion.md), [`adaptive-accessibility.md`](adaptive-accessibility.md), [`previews-and-catalog.md`](previews-and-catalog.md)
+- [`component-roadmap.md`](component-roadmap.md) — widget roadmap; W0–W3 implemented, W4 deferred
 - [`../01-overview-and-invariants.md`](../01-overview-and-invariants.md) (INV-08)

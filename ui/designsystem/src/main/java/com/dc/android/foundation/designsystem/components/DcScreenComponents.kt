@@ -1,5 +1,7 @@
 package com.dc.android.foundation.designsystem.components
 
+import androidx.compose.ui.res.stringResource
+import com.dc.android.foundation.designsystem.R
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
@@ -43,7 +45,7 @@ fun DcTopAppBar(
     modifier: Modifier = Modifier,
     style: DcTopAppBarStyle = DcTopAppBarStyle.Small,
     onNavigateBack: (() -> Unit)? = null,
-    navigateBackLabel: String = "Back",
+    navigateBackLabel: String = stringResource(R.string.dc_back),
     actions: @Composable RowScope.() -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
@@ -138,6 +140,7 @@ fun DcScaffold(
     topBar: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
     snackbarHost: @Composable () -> Unit = {},
+    floatingActionButton: @Composable () -> Unit = {},
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit
 ) {
     Scaffold(
@@ -145,6 +148,7 @@ fun DcScaffold(
         topBar = topBar,
         bottomBar = bottomBar,
         snackbarHost = snackbarHost,
+        floatingActionButton = floatingActionButton,
         contentWindowInsets = WindowInsets.safeDrawing,
         content = content
     )

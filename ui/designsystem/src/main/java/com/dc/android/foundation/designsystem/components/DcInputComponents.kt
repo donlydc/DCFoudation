@@ -2,6 +2,10 @@ package com.dc.android.foundation.designsystem.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import com.dc.android.foundation.designsystem.R
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.text.KeyboardActions
@@ -51,14 +55,26 @@ fun DcTextField(
     trailingContent: (@Composable () -> Unit)? = null,
     placeholder: String? = null,
     leadingIcon: ImageVector? = null,
-    errorText: String? = null
+    errorText: String? = null,
+    minLines: Int = 1,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    maxLength: Int? = null,
+    showCounter: Boolean = maxLength != null,
+    counterContentDescription: ((Int, Int) -> String)? = null
 ) {
     val hasError = isError || errorText != null
     val support = errorText ?: supportingText
+    val showsCounter = showCounter && maxLength != null
+    val counterDescription = if (showsCounter) {
+        counterContentDescription?.invoke(value.length, maxLength!!)
+            ?: stringResource(R.string.dc_character_counter, value.length, maxLength!!)
+    } else {
+        null
+    }
 
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
+        onValueChange = { onValueChange(enforceMaxLength(it, maxLength)) },
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 56.dp)
@@ -71,7 +87,21 @@ fun DcTextField(
         readOnly = readOnly,
         isError = hasError,
         label = { Text(label) },
-        supportingText = support?.let { text -> { Text(text) } },
+        supportingText = if (support != null || showsCounter) {
+            {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(support.orEmpty(), modifier = Modifier.weight(1f))
+                    if (showsCounter) {
+                        Text(
+                            text = "${value.length}/$maxLength",
+                            modifier = Modifier.semantics { contentDescription = counterDescription!! }
+                        )
+                    }
+                }
+            }
+        } else {
+            null
+        },
         placeholder = placeholder?.let { text ->
             { DcText(text, style = MaterialTheme.typography.bodyLarge) }
         },
@@ -79,6 +109,8 @@ fun DcTextField(
             { DcIcon(icon, contentDescription = null) }
         },
         singleLine = singleLine,
+        minLines = minLines,
+        maxLines = maxLines,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
         visualTransformation = visualTransformation,
@@ -183,3 +215,7 @@ private fun DcTextFieldFontScalePreview() {
         )
     }
 }
+
+/** Truncates [text] to [maxLength] when a limit is set; the DS never lets input exceed it. */
+internal fun enforceMaxLength(text: String, maxLength: Int?): String =
+    if (maxLength != null && text.length > maxLength) text.take(maxLength) else text

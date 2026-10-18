@@ -1,5 +1,7 @@
 package com.dc.android.foundation.designsystem.components
 
+import androidx.compose.ui.res.stringResource
+import com.dc.android.foundation.designsystem.R
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,13 +38,13 @@ fun <T> DcContentState(
     modifier: Modifier = Modifier,
     isEmpty: (T) -> Boolean = { false },
     onRetry: (() -> Unit)? = null,
-    loadingLabel: String = "Loading",
-    emptyTitle: String = "Nothing here yet",
-    retryLabel: String = "Retry",
+    loadingLabel: String = stringResource(R.string.dc_loading),
+    emptyTitle: String = stringResource(R.string.dc_nothing_here_yet),
+    retryLabel: String = stringResource(R.string.dc_retry),
     loadingContent: @Composable () -> Unit = { DcLoadingState(loadingLabel) },
     errorContent: @Composable (String) -> Unit = { message ->
         DcErrorState(
-            title = "Could not load content",
+            title = stringResource(R.string.dc_could_not_load_content),
             message = message,
             retryLabel = if (onRetry == null) null else retryLabel,
             onRetry = onRetry
