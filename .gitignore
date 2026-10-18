@@ -127,6 +127,11 @@ context.local.md
 # Local Claude Code state
 .claude/settings.local.json
 .claude/*.local.json
+.claude/worktrees/
+
+# Local coding-agent state and project-installed skill caches
+.agents/
+.codex/
 
 # NOTE:
 # CLAUDE.md is intentionally NOT ignored.
@@ -181,3 +186,6 @@ deliverables/
 # Dokka / generated docs
 dokka/
 docs/generated/
+
+# CodeGraph local index
+.codegraph/
