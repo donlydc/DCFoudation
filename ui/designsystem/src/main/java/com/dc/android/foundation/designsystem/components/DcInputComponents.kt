@@ -1,9 +1,14 @@
 package com.dc.android.foundation.designsystem.components
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -12,12 +17,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import com.dc.android.foundation.designsystem.preview.DcFontScalePreviews
+import com.dc.android.foundation.designsystem.preview.DcThemePreviews
+import com.dc.android.foundation.designsystem.theme.DcTheme
 import com.dc.android.foundation.designsystem.tokens.AccessibilityTokens
+import com.dc.android.foundation.designsystem.tokens.LocalDcSpacing
 
 /**
  * Controlled text input that centralizes the minimum touch target and error semantics.
@@ -37,28 +48,49 @@ fun DcTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    trailingContent: (@Composable () -> Unit)? = null
+    trailingContent: (@Composable () -> Unit)? = null,
+    placeholder: String? = null,
+    leadingIcon: ImageVector? = null,
+    errorText: String? = null
 ) {
+    val hasError = isError || errorText != null
+    val support = errorText ?: supportingText
+
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier
-            .defaultMinSize(minHeight = AccessibilityTokens.MinTouchTarget)
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 56.dp)
             .semantics {
-                if (isError && supportingText != null) {
-                    error(supportingText)
+                if (hasError && support != null) {
+                    error(support)
                 }
             },
         enabled = enabled,
         readOnly = readOnly,
-        isError = isError,
+        isError = hasError,
         label = { Text(label) },
-        supportingText = supportingText?.let { text -> { Text(text) } },
+        supportingText = support?.let { text -> { Text(text) } },
+        placeholder = placeholder?.let { text ->
+            { DcText(text, style = MaterialTheme.typography.bodyLarge) }
+        },
+        leadingIcon = leadingIcon?.let { icon ->
+            { DcIcon(icon, contentDescription = null) }
+        },
         singleLine = singleLine,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
         visualTransformation = visualTransformation,
-        trailingIcon = trailingContent
+        trailingIcon = trailingContent,
+        shape = MaterialTheme.shapes.medium,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            errorBorderColor = MaterialTheme.colorScheme.error,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+        )
     )
 }
 
@@ -106,8 +138,48 @@ fun DcPasswordTextField(
                 ),
                 enabled = enabled
             ) {
-                Text(toggleLabel)
+                DcText(toggleLabel, maxLines = 1)
             }
         }
     )
+}
+
+@DcThemePreviews
+@Composable
+private fun DcTextFieldPreview() {
+    DcTheme {
+        Column(verticalArrangement = Arrangement.spacedBy(LocalDcSpacing.current.component)) {
+            DcTextField(
+                label = "Name",
+                value = "",
+                placeholder = "Enter a name",
+                onValueChange = {}
+            )
+            DcTextField(
+                label = "Email",
+                value = "invalid",
+                errorText = "Enter a valid email address",
+                onValueChange = {}
+            )
+            DcTextField(
+                label = "Disabled",
+                value = "Unavailable",
+                enabled = false,
+                onValueChange = {}
+            )
+        }
+    }
+}
+
+@DcFontScalePreviews
+@Composable
+private fun DcTextFieldFontScalePreview() {
+    DcTheme {
+        DcTextField(
+            label = "Account name",
+            value = "A readable value at every font scale",
+            supportingText = "Supporting text must remain visible without overlap",
+            onValueChange = {}
+        )
+    }
 }

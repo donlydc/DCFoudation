@@ -12,4 +12,5 @@ object SpacingTokens {
     val Large: Dp = 24.dp
     val XLarge: Dp = 32.dp
     val XXLarge: Dp = 48.dp
+    val Component: Dp = 12.dp
 }
