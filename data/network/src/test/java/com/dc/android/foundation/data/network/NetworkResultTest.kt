@@ -2,6 +2,7 @@ package com.dc.android.foundation.data.network
 
 import com.dc.android.foundation.core.AppError
 import java.io.IOException
+import kotlinx.serialization.SerializationException
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -44,9 +45,35 @@ class NetworkResultTest {
 
         assertTrue(result is NetworkResult.Failure)
         assertEquals(
-            AppError.Http(code = 500, serverMessage = cause.message(), cause = cause),
+            AppError.Http(code = 500, serverMessage = null, cause = cause),
             (result as NetworkResult.Failure).error
         )
+    }
+
+    @Test
+    fun `safeApiCall uses an explicit error-body parser`() = runTest {
+        val response = Response.error<String>(
+            422,
+            "display-safe message".toResponseBody("text/plain".toMediaType())
+        )
+
+        val result = safeApiCall<String>(
+            errorBodyParser = HttpErrorBodyParser { body -> body?.string() }
+        ) { throw HttpException(response) }
+
+        assertEquals(
+            "display-safe message",
+            (result as NetworkResult.Failure).error.let { (it as AppError.Http).serverMessage }
+        )
+    }
+
+    @Test
+    fun `safeApiCall maps serialization failures`() = runTest {
+        val cause = SerializationException("invalid payload")
+
+        val result = safeApiCall<String> { throw cause }
+
+        assertEquals(AppError.Serialization(cause), (result as NetworkResult.Failure).error)
     }
 
     @Test(expected = IllegalStateException::class)

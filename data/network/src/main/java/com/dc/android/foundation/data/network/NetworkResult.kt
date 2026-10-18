@@ -2,6 +2,7 @@ package com.dc.android.foundation.data.network
 
 import com.dc.android.foundation.core.AppError
 import java.io.IOException
+import kotlinx.serialization.SerializationException
 import retrofit2.HttpException
 
 /**
@@ -26,7 +27,10 @@ sealed interface NetworkResult<out T> {
  * and are mapped to the stable [AppError] vocabulary here. Anything else is an
  * unexpected/programming-error condition and is rethrown rather than silently swallowed.
  */
-suspend fun <T> safeApiCall(block: suspend () -> T): NetworkResult<T> = try {
+suspend fun <T> safeApiCall(
+    errorBodyParser: HttpErrorBodyParser = NoOpHttpErrorBodyParser,
+    block: suspend () -> T
+): NetworkResult<T> = try {
     NetworkResult.Success(block())
 } catch (cause: IOException) {
     NetworkResult.Failure(AppError.Connectivity(cause))
@@ -34,8 +38,12 @@ suspend fun <T> safeApiCall(block: suspend () -> T): NetworkResult<T> = try {
     NetworkResult.Failure(
         AppError.Http(
             code = cause.code(),
-            serverMessage = cause.message(),
+            serverMessage = runCatching {
+                errorBodyParser.parse(cause.response()?.errorBody())
+            }.getOrNull(),
             cause = cause
         )
     )
+} catch (cause: SerializationException) {
+    NetworkResult.Failure(AppError.Serialization(cause))
 }

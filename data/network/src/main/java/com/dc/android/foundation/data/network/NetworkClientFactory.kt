@@ -6,6 +6,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import java.util.concurrent.TimeUnit
 
 /**
  * Generic, business-neutral Retrofit/OkHttp construction (DAT-NET-01). Owns no feature-specific
@@ -22,9 +23,23 @@ object NetworkClientFactory {
      * `HEADERS` or `BODY`, so no auth header or request/response content is ever logged (SEC-01).
      */
     fun createOkHttpClient(isDebug: Boolean): OkHttpClient =
+        createOkHttpClient(NetworkClientConfig(isDebug = isDebug))
+
+    /** Creates a client from an explicit, reusable transport policy. */
+    fun createOkHttpClient(config: NetworkClientConfig): OkHttpClient =
         OkHttpClient.Builder()
             .apply {
-                if (isDebug) {
+                connectTimeout(config.connectTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+                readTimeout(config.readTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+                writeTimeout(config.writeTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+                addInterceptor(
+                    NetworkHeadersInterceptor(
+                        headers = config.headers,
+                        requestIdHeader = config.requestIdHeader,
+                        requestIdProvider = config.requestIdProvider
+                    )
+                )
+                if (config.isDebug) {
                     addInterceptor(
                         HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
                     )

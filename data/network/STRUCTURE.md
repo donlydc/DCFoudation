@@ -2,7 +2,7 @@
 
 **Role:** reusable HTTP client and network-result infrastructure.
 
-**Owns:** `NetworkClientFactory`, `NetworkResult`, and `safeApiCall`.
+**Owns:** `NetworkClientFactory`, explicit client/request-id policy, `NetworkResult`, and `safeApiCall`.
 
 ## AI guidance
 
