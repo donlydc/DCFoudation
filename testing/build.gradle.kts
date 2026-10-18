@@ -12,6 +12,7 @@ dependencies {
     api(project(":runtime:concurrency"))
     api(project(":data:preferences"))
     api(project(":observability"))
+    api(project(":runtime:scheduling"))
     api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.coroutines.test)
     api(libs.junit)
