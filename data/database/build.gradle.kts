@@ -9,6 +9,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":runtime:concurrency"))
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.javax.inject)
 }

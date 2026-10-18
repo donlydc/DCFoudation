@@ -2,7 +2,7 @@
 
 **Role:** Room persistence infrastructure and the reference article schema.
 
-**Owns:** `DcDatabase`, `ArticleEntity`, and `ArticleDao`.
+**Owns:** Room construction/transaction/freshness policies plus the current Articles reference schema.
 
 ## AI guidance
 
