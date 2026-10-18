@@ -1,0 +1,29 @@
+<resources>
+    <string name="app_name">DC Android Foundation</string>
+    <string name="nav_greeting">Chào hỏi</string>
+    <string name="nav_articles">Bài viết</string>
+    <string name="nav_settings">Cài đặt</string>
+    <string name="nav_catalog">Danh mục</string>
+    <string name="nav_showcase">Mẫu giao diện</string>
+
+    <string name="config_title">Cài đặt ứng dụng</string>
+    <string name="config_appearance">Giao diện</string>
+    <string name="config_theme">Chủ đề</string>
+    <string name="config_theme_system">Theo hệ thống</string>
+    <string name="config_theme_light">Sáng</string>
+    <string name="config_theme_dark">Tối</string>
+    <string name="config_ui_size">Kích thước giao diện</string>
+    <string name="config_size_compact">Thu gọn</string>
+    <string name="config_size_standard">Tiêu chuẩn</string>
+    <string name="config_size_comfortable">Thoải mái</string>
+    <string name="config_ui_size_description">Điều chỉnh chữ và khoảng cách ngữ nghĩa nhưng vẫn giữ vùng chạm đáp ứng tiếp cận.</string>
+    <string name="config_dynamic_color">Màu động</string>
+    <string name="config_dynamic_color_description">Dùng màu hình nền hệ thống trên thiết bị được hỗ trợ.</string>
+    <string name="config_language_section">Ngôn ngữ và khu vực</string>
+    <string name="config_language">Ngôn ngữ ứng dụng</string>
+    <string name="config_language_system">Theo hệ thống</string>
+    <string name="config_language_english">Tiếng Anh</string>
+    <string name="config_language_vietnamese">Tiếng Việt</string>
+    <string name="config_language_description">Đổi ngôn ngữ sẽ tạo lại màn hình hiện tại và nạp lại tài nguyên đã dịch.</string>
+    <string name="config_reset">Đặt lại giao diện</string>
+</resources>

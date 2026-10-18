@@ -1,9 +1,10 @@
 package com.dc.android.foundation.di
 
 import android.content.Context
-import androidx.room.Room
 import com.dc.android.foundation.data.database.ArticleDao
 import com.dc.android.foundation.data.database.DcDatabase
+import com.dc.android.foundation.data.database.RoomDatabaseFactory
+import com.dc.android.foundation.runtime.concurrency.DispatcherProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,8 +19,15 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDcDatabase(@ApplicationContext context: Context): DcDatabase =
-        Room.databaseBuilder(context, DcDatabase::class.java, "dc_foundation_db").build()
+    fun provideDcDatabase(
+        @ApplicationContext context: Context,
+        dispatcherProvider: DispatcherProvider
+    ): DcDatabase = RoomDatabaseFactory.create(
+        context = context,
+        databaseClass = DcDatabase::class.java,
+        name = "dc_foundation_db",
+        dispatcherProvider = dispatcherProvider
+    )
 
     @Provides
     @Singleton

@@ -11,6 +11,10 @@ plugins {
 android {
     namespace = "com.dc.android.foundation"
 
+    androidResources {
+        generateLocaleConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.dc.android.foundation"
         versionCode = 1
@@ -36,7 +40,7 @@ dependencies {
     implementation(project(":observability"))
     implementation(project(":platform:navigation"))
     implementation(project(":platform:permission"))
-    implementation(project(":runtime:background"))
+    implementation(project(":runtime:scheduling"))
     implementation(project(":security"))
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.work.runtime.ktx)
@@ -48,6 +52,8 @@ dependencies {
     implementation(libs.okhttp.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)

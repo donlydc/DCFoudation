@@ -10,9 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.dc.android.foundation.designsystem.components.DcButton
+import com.dc.android.foundation.designsystem.components.DcCard
+import com.dc.android.foundation.designsystem.components.DcContentState
 import com.dc.android.foundation.designsystem.components.DcText
 import com.dc.android.foundation.designsystem.theme.DcTheme
-import com.dc.android.foundation.designsystem.tokens.SpacingTokens
+import com.dc.android.foundation.designsystem.tokens.LocalDcSpacing
 import com.dc.android.foundation.platform.permission.PermissionState
 
 /**
@@ -26,15 +28,13 @@ fun ArticlesScreen(
     onAction: (ArticlesUiAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val spacing = LocalDcSpacing.current
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(SpacingTokens.Medium),
-        verticalArrangement = Arrangement.spacedBy(SpacingTokens.Small)
+            .padding(spacing.medium),
+        verticalArrangement = Arrangement.spacedBy(spacing.small)
     ) {
-        if (state.isShowingStaleData) {
-            DcText(text = "Showing cached data — refresh failed")
-        }
         if (state.notificationPermissionState != PermissionState.Granted) {
             DcButton(
                 text = "Enable notifications for sync updates",
@@ -44,12 +44,28 @@ fun ArticlesScreen(
         DcButton(
             text = if (state.isRefreshing) "Refreshing..." else "Refresh",
             onClick = { onAction(ArticlesUiAction.Refresh) },
-            enabled = !state.isRefreshing
+            enabled = !state.isRefreshing,
+            loading = state.isRefreshing
         )
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Small)) {
-            items(state.articles, key = { it.id }) { article ->
-                Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.XSmall)) {
-                    DcText(text = article.title)
+        DcContentState(
+            value = state.articles,
+            isLoading = state.isRefreshing,
+            errorMessage = if (state.isShowingStaleData) {
+                "Showing cached data — refresh failed"
+            } else {
+                null
+            },
+            modifier = Modifier.weight(1f),
+            isEmpty = { it.isEmpty() },
+            onRetry = { onAction(ArticlesUiAction.Refresh) },
+            emptyTitle = "Nothing here yet"
+        ) { articles ->
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(spacing.component)) {
+                items(articles, key = { it.id }) { article ->
+                    DcCard(modifier = Modifier.fillMaxWidth()) {
+                        DcText(text = article.title)
+                        DcText(text = article.body)
+                    }
                 }
             }
         }

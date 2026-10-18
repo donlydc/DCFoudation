@@ -5,14 +5,17 @@ import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.work.HiltWorker
-import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.dc.android.foundation.R
+import com.dc.android.foundation.core.AppError
 import com.dc.android.foundation.observability.Logger
 import com.dc.android.foundation.platform.permission.NotificationPermission
 import com.dc.android.foundation.platform.permission.PermissionState
+import com.dc.android.foundation.runtime.scheduling.work.DcJobResult
+import com.dc.android.foundation.runtime.scheduling.work.DcWorker
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 
 private const val LOG_TAG = "ArticlesSyncWorker"
 private const val NOTIFICATION_CHANNEL_ID = "articles_sync"
@@ -20,7 +23,7 @@ private const val NOTIFICATION_ID = 1001
 
 /**
  * The real BG-01 instance: a periodic, retry-guaranteed sync of `articles` that survives app
- * closure/process death. Deliberately lives in `:app`, not `:runtime:background` — `@HiltWorker`
+ * closure/process death. Deliberately lives in `:app`, not `:runtime:scheduling` — `@HiltWorker`
  * needs the same Hilt component graph as [ArticlesRepository], which is itself an `:app`-only
  * type (14-background-work.md explains the full placement rationale).
  *
@@ -33,23 +36,25 @@ class ArticlesSyncWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val articlesRepository: ArticlesRepository,
     private val logger: Logger
-) : CoroutineWorker(context, params) {
+) : DcWorker<Unit>(context, params) {
 
-    override suspend fun doWork(): Result {
+    override suspend fun run(input: Unit?): DcJobResult {
         return try {
             val succeeded = articlesRepository.refresh()
             // Status only — never log article title/body content (SEC-01).
             logger.d(LOG_TAG, "doWork: succeeded=$succeeded")
             if (succeeded) {
                 postSyncNotification()
-                Result.success()
+                DcJobResult.Success
             } else {
-                // Network failure: WorkManager's own backoff/retry policy is BG-01's retry guarantee.
-                Result.retry()
+                DcJobResult.Retry
             }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             logger.e(LOG_TAG, "doWork failed", t)
-            Result.retry()
+            // Programming/data failures are terminal; only the explicit false network result retries.
+            DcJobResult.Failure(AppError.Unknown(t))
         }
     }
 

@@ -4,7 +4,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -15,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dc.android.foundation.designsystem.components.DcSnackbarEffect
+import com.dc.android.foundation.designsystem.components.DcScaffold
 import com.dc.android.foundation.platform.permission.NotificationPermission
 import kotlinx.coroutines.flow.collect
 
@@ -54,12 +55,11 @@ fun ArticlesRoute(
         )
     }
 
-    LaunchedEffect(uiState.userMessage) {
-        uiState.userMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.onAction(ArticlesUiAction.UserMessageShown)
-        }
-    }
+    DcSnackbarEffect(
+        message = uiState.userMessage,
+        snackbarHostState = snackbarHostState,
+        onMessageShown = { viewModel.onAction(ArticlesUiAction.UserMessageShown) }
+    )
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
@@ -70,7 +70,7 @@ fun ArticlesRoute(
         }
     }
 
-    Scaffold(
+    DcScaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->

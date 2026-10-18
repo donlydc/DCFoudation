@@ -9,7 +9,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.dc.android.foundation.designsystem.components.DcButton
 import com.dc.android.foundation.designsystem.components.DcText
 import com.dc.android.foundation.designsystem.theme.DcTheme
-import com.dc.android.foundation.designsystem.tokens.SpacingTokens
+import com.dc.android.foundation.designsystem.tokens.LocalDcSpacing
 
 /**
  * Stateless — receives [state], sends [onAction]. No ViewModel/DI import here (DI-03,
@@ -21,15 +21,17 @@ fun GreetingScreen(
     onAction: (GreetingUiAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val spacing = LocalDcSpacing.current
     Column(
-        modifier = modifier.padding(SpacingTokens.Medium),
-        verticalArrangement = Arrangement.spacedBy(SpacingTokens.Small)
+        modifier = modifier.padding(spacing.medium),
+        verticalArrangement = Arrangement.spacedBy(spacing.small)
     ) {
         DcText(text = state.message)
         DcButton(
             text = if (state.isRefreshing) "Refreshing..." else "Refresh",
             onClick = { onAction(GreetingUiAction.Refresh) },
-            enabled = !state.isRefreshing
+            enabled = !state.isRefreshing,
+            loading = state.isRefreshing
         )
     }
 }

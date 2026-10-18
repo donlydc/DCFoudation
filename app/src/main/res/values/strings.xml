@@ -1,3 +1,29 @@
 <resources>
     <string name="app_name">DC Android Foundation</string>
+    <string name="nav_greeting">Greeting</string>
+    <string name="nav_articles">Articles</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_catalog">Catalog</string>
+    <string name="nav_showcase">Showcase</string>
+
+    <string name="config_title">Application settings</string>
+    <string name="config_appearance">Appearance</string>
+    <string name="config_theme">Theme</string>
+    <string name="config_theme_system">System default</string>
+    <string name="config_theme_light">Light</string>
+    <string name="config_theme_dark">Dark</string>
+    <string name="config_ui_size">Interface size</string>
+    <string name="config_size_compact">Compact</string>
+    <string name="config_size_standard">Standard</string>
+    <string name="config_size_comfortable">Comfortable</string>
+    <string name="config_ui_size_description">Scales semantic text and spacing while preserving accessible touch targets.</string>
+    <string name="config_dynamic_color">Dynamic color</string>
+    <string name="config_dynamic_color_description">Use system wallpaper colors on supported devices.</string>
+    <string name="config_language_section">Language and region</string>
+    <string name="config_language">Application language</string>
+    <string name="config_language_system">System default</string>
+    <string name="config_language_english">English</string>
+    <string name="config_language_vietnamese">Vietnamese</string>
+    <string name="config_language_description">Changing the language recreates the current activity and reloads localized resources.</string>
+    <string name="config_reset">Reset appearance</string>
 </resources>
