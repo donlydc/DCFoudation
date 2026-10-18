@@ -13,5 +13,6 @@ class DcAndroidLibraryConventionPlugin : Plugin<Project> {
                 testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
             }
         }
+        addLibrary("coreLibraryDesugaring", "desugar-jdk-libs")
     }
 }

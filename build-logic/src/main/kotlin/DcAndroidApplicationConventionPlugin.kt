@@ -17,5 +17,6 @@ class DcAndroidApplicationConventionPlugin : Plugin<Project> {
                 buildConfig = true
             }
         }
+        addLibrary("coreLibraryDesugaring", "desugar-jdk-libs")
     }
 }

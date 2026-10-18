@@ -18,6 +18,7 @@ internal fun Project.configureAndroid(extension: CommonExtension) {
     extension.defaultConfig.minSdk = DC_MIN_SDK
     extension.compileOptions.sourceCompatibility = JavaVersion.VERSION_11
     extension.compileOptions.targetCompatibility = JavaVersion.VERSION_11
+    extension.compileOptions.isCoreLibraryDesugaringEnabled = true
     extension.lint.abortOnError = true
     extension.lint.checkReleaseBuilds = true
 }
