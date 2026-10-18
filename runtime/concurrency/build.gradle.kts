@@ -1,12 +1,8 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm)
-}
-
-kotlin {
-    jvmToolchain(11)
+    id("dc.kotlin.jvm")
+    id("dc.testing")
 }
 
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
-    testImplementation(libs.junit)
 }
