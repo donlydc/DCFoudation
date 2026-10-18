@@ -1,6 +1,5 @@
 package com.dc.android.foundation.platform.permission
 
-import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -13,7 +12,8 @@ import androidx.core.content.ContextCompat
  */
 object NotificationPermission {
 
-    val permissionName: String = Manifest.permission.POST_NOTIFICATIONS
+    // Kept as the platform string so reading this API is safe even when the caller runs pre-33.
+    const val permissionName: String = "android.permission.POST_NOTIFICATIONS"
 
     /**
      * Below API 33 posting a notification never required a runtime permission, so this always
