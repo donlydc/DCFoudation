@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Apps opt in to the required permissions (exact alarm and boot completed). This receiver is
+      merged automatically so apps cannot accidentally omit restore behavior after a reboot,
+      package update, or wall-clock change.
+    -->
+    <application>
+        <receiver
+            android:name="com.dc.android.foundation.runtime.scheduling.alarm.DcAlarmRestorer"
+            android:directBootAware="false"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
