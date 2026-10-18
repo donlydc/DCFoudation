@@ -10,13 +10,14 @@ Primitive design values only — no semantic meaning, no Material3 wiring (that'
 
 `ui/designsystem/src/main/java/com/dc/android/foundation/designsystem/tokens/`:
 
-- `ColorTokens.kt` — 6 raw `Color` values (`Purple80/40`, `PurpleGrey80/40`, `Pink80/40`), carried over unchanged from the stock template as a neutral seed palette. Not brand-final.
-- `SpacingTokens.kt` — `None`(0) / `XSmall`(4) / `Small`(8) / `Medium`(16) / `Large`(24) / `XLarge`(32) / `XXLarge`(48), all `Dp`.
-- `ShapeTokens.kt` — `None`/`Small`(4dp)/`Medium`(8dp)/`Large`(16dp)/`Full`(50%) `RoundedCornerShape`.
+- `ColorTokens.kt` — complete blue, neutral, red, green and amber ramps. The default brand primary is Blue600 (`#2563EB`); Grey50 (`#F7F8FA`) is the light app background.
+- `DcSpacing.kt` — overrideable `DcSpacing` and `LocalDcSpacing`; `Default` is 0/4/8/12/16/24/32/48dp, where `component` is the 12dp step. `Compact` supplies a denser product option. `SpacingTokens.kt` remains a source-compatible primitive reference.
+- `ShapeTokens.kt` — `None`/`ExtraSmall`(4dp)/`Small`(8dp)/`Medium`(12dp)/`Large`(16dp)/`ExtraLarge`(20dp)/`Full`(50%) `RoundedCornerShape`.
+- `SurfaceTokens.kt` — `StrokeTokens.Hairline` (1dp) and a restrained `ElevationTokens` scale (0dp/1dp).
 - `MotionTokens.kt` — `DURATION_SHORT_MS`(150) / `DURATION_MEDIUM_MS`(300) / `DURATION_LONG_MS`(500) `Int` constants.
 - `AccessibilityTokens.kt` — `MinTouchTarget` (48dp).
 
-No elevation tokens yet — Material3's default elevation scale is used as-is (see [`spacing-shapes-elevation.md`](spacing-shapes-elevation.md)).
+Primitive values do not carry component meaning. Semantic roles are selected in `DcTheme` and reusable components.
 
 ## Rules
 

@@ -20,7 +20,7 @@ Repository hiện có 13 module trong `settings.gradle.kts`:
 :app
 ├─ :ui:designsystem
 ├─ :runtime:concurrency
-├─ :runtime:background
+├─ :runtime:scheduling
 ├─ :data:preferences
 ├─ :data:network
 ├─ :data:database

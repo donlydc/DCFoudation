@@ -11,7 +11,7 @@ How infrastructure exceptions get mapped before they cross into presentation.
 No application-wide generic `Resource<T>` wrapper exists — feature state remains more expressive than a universal loading/success/error envelope.
 
 - `DataStorePreferencesDataSource` catches expected read `IOException` at its boundary and emits empty preferences, so callers receive their declared default.
-- `safeApiCall` maps expected `IOException`/Retrofit `HttpException` failures into `NetworkResult.Failure(AppError)`; unexpected/programming failures are rethrown.
+- `safeApiCall` maps expected `IOException`/Retrofit `HttpException`/serialization failures into `NetworkResult.Failure(AppError)`; unexpected/programming failures are rethrown. HTTP payload parsing is opt-in and feature-owned, so an unknown server body is not retained by default.
 - `ArticlesRepository` keeps Room as source of truth, records refresh failures, preserves cached rows, and returns a success flag. `ArticlesViewModel` converts that outcome into durable `UiState` (`isShowingStaleData` plus `userMessage`) rather than exposing infrastructure exceptions or a transient message channel.
 
 `:foundation` owns the intentionally small shared `AppError` vocabulary (`Connectivity`, `Http`, `Serialization`, `Unknown`) and `Retryable`. Feature-specific localized messages remain in feature presentation state; do not invent a generic `UiMessage` mapping in the generator before a real cross-feature policy requires one.
@@ -28,7 +28,7 @@ No application-wide generic `Resource<T>` wrapper exists — feature state remai
 
 ## Testing / validation
 
-`NetworkResultTest` covers success, I/O failure, HTTP failure, and unexpected exception propagation. `ArticlesViewModelTest` covers durable refresh-success/failure messages and acknowledgement. A failing-DataStore test is still pending because the current implementation does not inject a replaceable DataStore read source.
+`NetworkResultTest` covers success, I/O, HTTP, serialization and unexpected exception propagation. `NetworkClientFactoryTest` verifies policy headers/request IDs and timeouts against MockWebServer. `DataStorePreferencesDataSourceTest` covers expected read-I/O fallback through a deterministic `DataStore` contract double. `ArticlesViewModelTest` covers durable refresh-success/failure messages and acknowledgement.
 
 ## Related documents
 

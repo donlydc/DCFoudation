@@ -22,10 +22,10 @@ New Gradle module `:ui:designsystem` (namespace `com.dc.android.foundation.desig
 
 - `tokens/` — `ColorTokens`, `SpacingTokens`, `ShapeTokens`, `MotionTokens`, `AccessibilityTokens`.
 - `theme/` — `DcTheme` (semantic entry point), `DcTypography`, `DcShapes`.
-- `components/` — text/button primitives plus controlled text/password input, loading/empty/error/offline states and an accessible list row.
+- `components/` — text/button primitives plus controlled text/password input, loading/empty/error/offline states, accessible list rows and a neutral key/value detail row.
 - `catalog/DesignSystemCatalog.kt` — manual preview catalog (light + dark).
 
-`app`'s old `ui/theme/{Color,Type,Theme}.kt` were deleted; `MainActivity.kt` now themes through `DcTheme` and uses `DcText` instead of a raw Material `Text`.
+`DcTheme` is now the app-level customization seam: callers may override its Material `ColorScheme`, `Typography`, `Shapes`, extended `DcColors`, and `DcSpacing`; dynamic color is opt-in so branded apps and previews remain deterministic. `AccessibilityTokens.MinTouchTarget` remains non-overridable. `app`'s old `ui/theme/{Color,Type,Theme}.kt` were deleted; `MainActivity.kt` themes through `DcTheme`, and its debug build exposes the catalog destination.
 
 Read only the subdocument for the concern being changed.
 
@@ -64,5 +64,5 @@ Read only the subdocument for the concern being changed.
 
 ## Related documents
 
-- [`tokens.md`](tokens.md), [`semantic-theme.md`](semantic-theme.md), [`typography.md`](typography.md), [`spacing-shapes-elevation.md`](spacing-shapes-elevation.md), [`components.md`](components.md), [`motion.md`](motion.md), [`adaptive-accessibility.md`](adaptive-accessibility.md), [`previews-and-catalog.md`](previews-and-catalog.md)
+- [`tokens.md`](tokens.md), [`semantic-theme.md`](semantic-theme.md), [`typography.md`](typography.md), [`spacing-shapes-elevation.md`](spacing-shapes-elevation.md), [`components.md`](components.md), [`common-screen-patterns.md`](common-screen-patterns.md), [`motion.md`](motion.md), [`adaptive-accessibility.md`](adaptive-accessibility.md), [`previews-and-catalog.md`](previews-and-catalog.md)
 - [`../01-overview-and-invariants.md`](../01-overview-and-invariants.md) (INV-08)

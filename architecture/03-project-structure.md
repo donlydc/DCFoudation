@@ -14,7 +14,7 @@ DCAndroidFoundation/
 ├── app/                         composition root, app shell, greeting/articles reference features
 ├── ui/designsystem/             semantic Compose theme, tokens, components and catalog
 ├── runtime/concurrency/         dispatcher contracts and implementations (plain Kotlin/JVM)
-├── runtime/background/          business-neutral WorkManager scheduling policy
+├── runtime/scheduling/          WorkManager + AlarmManager scheduling policy
 ├── data/preferences/            DataStore-backed generic preferences boundary
 ├── data/network/                Retrofit/OkHttp construction and network result boundary
 ├── data/database/               Room database plus the reference articles schema

@@ -8,6 +8,42 @@ Durable decisions with date, context, decision, alternatives, consequences, affe
 
 ## Entries
 
+### DEC-07 — 2026-09-05 — Separate appearance persistence from Android locale ownership
+
+**Context:** Applications need common controls for theme, interface size, dynamic color and language. Persisting all four in custom DataStore state would duplicate Android's per-app locale source of truth; globally overriding Compose density would also interfere with accessibility and responsive breakpoints.
+
+**Decision:** Persist typed appearance values through `AppConfigurationRepository`; apply `DcUiScale` to semantic typography/spacing at the root `DcTheme`, retaining the fixed touch-target floor and system font scale. Manage language only through `AppLanguageController`/`AppCompatDelegate`, with generated locale config and AndroidX compatibility storage. Keep these application-level classes in `:app` until another module consumer earns a separate `:platform:configuration` boundary.
+
+**Alternatives considered:** Store locale twice in DataStore, override `LocalDensity`, let each screen apply configuration, or pre-create a configuration module with one consumer.
+
+**Consequences:** Changes are immediately observable and survive restart; locale stays synchronized with Android App Languages; feature UI receives no raw DataStore or AppCompat APIs. UI scale changes semantic layout/text without weakening accessibility minimums.
+
+**Affected:** `app/config/*`, `MainActivity.kt`, `ui/designsystem/theme/{DcTheme,DcUiScale}.kt`, CFG-02/03, DAT-01, INV-02/08.
+
+### DEC-06 — 2026-09-05 — Promote stable UI primitives, not domain-shaped screens
+
+**Context:** The Trip showcase contained a reusable label/value row and a record-card layout, but copying a Trip-shaped "service screen" into the design system would introduce business assumptions and a large, inflexible API.
+
+**Decision:** Promote the stable label/value policy as business-neutral `DcKeyValueRow`; compose record cards from `DcCard` + `DcListRow` + `DcStatusChip`; keep screen orchestration, filters, formatting, domain status mapping and models in the feature/showcase layer. Product states come from Route/ViewModel and are rendered through `DcContentState`, not through developer-only state controls in the product UI.
+
+**Alternatives considered:** Add a generic `DcServiceScreen`/`DcServiceRecordCard`, or keep duplicating the label/value styling in each feature.
+
+**Consequences:** The same primitives cover trips, orders, bookings, transactions and profiles without leaking their models into `:ui:designsystem`. Feature screens retain layout freedom, while typography, spacing, status and interaction policy stay centralized.
+
+**Affected:** `ui/designsystem/components/DcListComponents.kt`, `app/showcase/trip/*`, `architecture/07-design-system/common-screen-patterns.md`, INV-03, INV-08, DS-04.
+
+### DEC-05 — 2026-09-05 — Apply the UI style guide as a delta over the existing DC design system
+
+**Context:** `:ui:designsystem` already exposed a broad `Dc*` API and a five-layer `DcTheme` override seam, while the requested guide assumed a new `core/design-system` module and `App*` APIs.
+
+**Decision:** Keep `:ui:designsystem` and the `Dc` prefix; install the clean blue/neutral visual language as overridable defaults; keep dynamic color opt-in; preserve adaptive navigation; keep caller-owned dialog visibility; and place business-specific Trip reference screens in debug `:app` showcase code.
+
+**Alternatives considered:** Create the module and API names from the generic prompt, force phone-only `NavigationBar`, or put Trip models in the reusable UI module.
+
+**Consequences:** Existing consumers retain their architecture and can rebrand through `DcTheme`. Public component parameters are additive. Shape defaults intentionally move to 4/8/12/16/20dp, so all shape call sites are audited. Status chips remain visually compact because they are labels; Material owns the touch target of interactive filter chips.
+
+**Affected:** `ui/designsystem/**`, `app/src/main/**`, DS-01..04, INV-03, INV-08.
+
 ### DEC-01 — 2026-08-16 — Correct `CLAUDE.md` namespace instead of renaming the codebase
 
 **Context:** Phase B reconnaissance found root `CLAUDE.md` claimed primary namespace `com.dc.foundation`, but the real Android Studio-generated project uses `com.dc.android.foundation` throughout (`app/build.gradle.kts`, every `package` declaration).

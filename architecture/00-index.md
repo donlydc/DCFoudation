@@ -17,7 +17,7 @@ This tree began as a phase-by-phase implementation plan and is now a living desc
 | `04-app-bootstrap-and-lifecycle.md` | done (Phase E) |
 | `05-presentation-udf.md` | done (Phase E) |
 | `06-navigation.md` | implemented (type-safe top-level Navigation Compose) |
-| `07-design-system/*` (9 files) | implemented tokens/theme plus P0 state, input and list components |
+| `07-design-system/*` (10 files) | implemented tokens/theme, reusable components and common screen patterns |
 | `08-dependency-injection-hilt.md` | done (Phase D) |
 | `09-concurrency-and-threading.md` | done (Phase F) |
 | `10-data/*` (7 files) | implemented reference paths for DataStore, Retrofit, Room and offline-first cache |
@@ -26,7 +26,7 @@ This tree began as a phase-by-phase implementation plan and is now a living desc
 | `13-permissions.md` | notification permission path implemented |
 | `14-background-work.md` | periodic WorkManager sync reference implemented |
 | `15-observability/*` (4 files) | logging/analytics/crash contracts implemented; vendor/performance tracing optional |
-| `16-config-feature-flags-environments.md` | done (Phase H) |
+| `16-config-feature-flags-environments.md` | implemented environment + persisted appearance + per-app language configuration |
 | `17-testing.md` | implemented shared `:testing` kit plus feature/module tests |
 | `18-build-logic-and-dependencies.md` | implemented conventions and safe feature generator |
 | `19-ci-release-quality-gates.md` | done (Phase I) |

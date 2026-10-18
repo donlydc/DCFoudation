@@ -1,5 +1,12 @@
 # Task Handover — DC Android Foundation
 
+> **Current-state note (2026-08-25):** the historical phase snapshot below is retained for
+> delivery context, but is no longer a current topology report. The repository now has 13 Gradle
+> modules, including `:runtime:scheduling`, `:data:{network,database}`, `:platform:{navigation,
+> permission}`, `:security`, `:observability` and `:testing`, plus both `greeting` and `articles`
+> reference features. Use `architecture/00-index.md`, `settings.gradle.kts` and current source as
+> technical authority; this handover must be re-authored before the next phase handoff.
+
 **Date:** 2026-08-16
 **Handing over at:** all 12 phases (A–L) complete. This build is finished; see "Open gaps" below for the one thing still worth doing before treating it as production-verified.
 

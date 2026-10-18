@@ -1,41 +1,75 @@
-# Background work
+# Background work and scheduling
 
 [Back to architecture index](00-index.md)
 
 ## Scope
 
-Persistent/retriable background work policy (WorkManager vs. a plain coroutine).
+Persistent/retriable WorkManager jobs and user-visible, wall-clock alarm/reminder scheduling.
 
-## Current implementation (Phase Q)
+## Current implementation
 
-`articles` gets the real BG-01 use case DEC-04 set out to manufacture: `ArticlesSyncWorker` periodically calls `ArticlesRepository.refresh()` so cached data stays fresh even when the app isn't in the foreground, surviving app closure/process death with WorkManager's own retry/backoff guarantees.
+`:runtime:scheduling` is the business-neutral scheduling boundary. `DcScheduler` is the only
+public entry point for application scheduling: it routes `After` and `Every` triggers to
+WorkManager, and `ExactAt`, `DailyAt`, and `WeeklyAt` triggers to AlarmManager. This distinction
+is deliberate: WorkManager's delay and periodic APIs are timing-minimum/best-effort mechanisms,
+not a replacement for an alarm that must fire at a precise wall-clock time.
 
-**Module split — `:runtime:background` vs `:app`:**
-
-- `:runtime:background` owns `PeriodicSyncScheduler`, a generic, business-neutral helper (`enqueue(context, workerClass, uniqueWorkName, repeatIntervalMinutes)`) that wraps `PeriodicWorkRequest` + `WorkManager.enqueueUniquePeriodicWork` with this repo's standard policy: `NetworkType.CONNECTED` constraint, `ExistingPeriodicWorkPolicy.KEEP` so re-enqueuing on every process start doesn't reset the schedule. It has no Hilt import and no knowledge of `articles` — same "framework-agnostic library, `:app` does the DI wiring" split as `:runtime:concurrency`/`:data:preferences`.
-- `ArticlesSyncWorker` (the actual `@HiltWorker class : CoroutineWorker`) lives in `app/src/main/java/com/dc/android/foundation/articles/`, not `:runtime:background`. Reason: `@HiltWorker`/`@AssistedInject` need the same Hilt component graph as `ArticlesRepository`, and `ArticlesRepository` is itself an `:app`-only type (it was never extracted to a library module). Hilt-DI-annotated classes live only in `:app` per this repo's established convention — forcing the real worker into `:runtime:background` would mean either duplicating `ArticlesRepository`'s fetch-and-upsert logic or making `:runtime:background` depend on `:app`-only application code, both worse than the current split.
-- `DcApplication` implements `Configuration.Provider`, providing a Hilt-injected `HiltWorkerFactory` (`androidx.hilt:hilt-work` standard pattern). `AndroidManifest.xml`'s default `androidx.work.WorkManagerInitializer` startup entry is removed (`tools:node="remove"`) so WorkManager only ever sees this `Configuration`.
-- `DcApplication.onCreate()` calls `PeriodicSyncScheduler.enqueue(...)` to schedule `ArticlesSyncWorker` as unique periodic work named `"articles-sync"`, repeating every **15 minutes** — WorkManager's own minimum periodic interval; chosen because this is a reference/demo sync job, not a latency-sensitive one.
-- On success, `ArticlesSyncWorker` posts a best-effort "Articles synced" notification (skipped silently, never a crash, if `POST_NOTIFICATIONS` isn't granted — see `13-permissions.md` PERM-01). On network failure, `doWork()` returns `Result.retry()` so WorkManager's backoff policy is the retry guarantee; on success it returns `Result.success()`.
+- `AndroidDcWorkScheduler` owns typed `DcJobSpec`, constraints, WorkInfo-to-`DcJobState` mapping,
+  early rejection of periodic intervals below 15 minutes, and bounded retries through
+  `DcRetryPolicy`. `DcWorker` rethrows coroutine cancellation and converts other uncaught errors
+  to a terminal `AppError` rather than allowing them to retry forever.
+- `AndroidDcAlarmScheduler` persists each `DcAlarm` as a small JSON file, uses immutable,
+  explicit PendingIntents, and computes recurring daily/weekly occurrences with `java.time`.
+  `DcAlarmRestorer` is manifest-merged and restores stored alarms after boot, package replacement,
+  time-zone, and wall-clock changes. The app supplies the required permissions because choosing
+  `SCHEDULE_EXACT_ALARM` versus `USE_EXACT_ALARM` is a product/Play-policy decision.
+- Exact schedule requests check `canScheduleExactAlarms()` on every API 31+ device before calling
+  `setExactAndAllowWhileIdle()` or `setAlarmClock()`. A missing grant returns
+  `DcScheduleOutcome.NeedsExactAlarmPermission`; it is never silently downgraded.
+- `ArticlesSyncWorker` remains an `@HiltWorker` in `:app`, where its `ArticlesRepository` lives,
+  but now extends `DcWorker<Unit>`. `DcApplication` creates the facade from its explicit
+  process-lifetime `AppCoroutineScope` to enqueue the 15-minute, connected unique sync work without
+  blocking the main thread. The scheduling module imports no Hilt.
 
 ## Rules
 
-### BG-01 — Persistent/retriable work uses WorkManager via a `CoroutineWorker`; screen-scoped work stays a `viewModelScope` coroutine
+### BG-01 — Select the engine from the required delivery guarantee
 
-**Rule:** Work that must survive app closure/process death with retry guarantees is a `CoroutineWorker` (optionally `@HiltWorker` for DI), scheduled through `PeriodicSyncScheduler` (`:runtime:background`) or an equivalent thin WorkManager wrapper — never a raw `GlobalScope`/detached coroutine. Work that only needs to live as long as a screen (e.g. `GreetingViewModel`'s refresh, `ArticlesViewModel`'s manual `Refresh` action) stays a `viewModelScope` coroutine; it does not get promoted to a `Worker` just because a `Worker` also exists in the app. `@HiltWorker`/`@AssistedInject` Worker classes that need Hilt-DI-annotated application types (repositories, etc.) live in `:app`; only framework-agnostic scheduling/policy helpers live in `:runtime:background`.
+**Rule:** Use `DcScheduler` instead of direct WorkManager/AlarmManager calls. Persistent,
+retriable work that may run late uses `DcTrigger.After` or `DcTrigger.Every` and a `DcJobSpec`.
+User-visible actions that must fire at a wall-clock time use `ExactAt`, `DailyAt`, or `WeeklyAt`
+with an alarm request. Screen-scoped work stays in `viewModelScope`.
 
-**Why:** WorkManager exists for guarantees a coroutine scope can't give (survives process death, persisted retry/backoff, constraint-gated execution) — using it for screen-scoped work is unnecessary overhead and indirection; not using it for the sync job would silently drop syncs whenever the app isn't running, defeating the whole point of DEC-04's `articles` sync use case.
+**Why:** A WorkManager periodic interval is at least 15 minutes and may be delayed by constraints
+or Doze. Conversely, using an exact alarm for cache cleanup wastes restricted platform resources.
+The trigger type makes the delivery guarantee explicit at the call site.
 
-**Verification:** `grep -r "GlobalScope" app/src runtime/background/src` is empty. `ArticlesSyncWorker` is the only `CoroutineWorker` in the repo and lives under `app/src/main/java/com/dc/android/foundation/articles/`, not `runtime/background/src`. `runtime/background/src/main/java/.../PeriodicSyncScheduler.kt` has no `dagger`/`javax.inject` import beyond what's already a transitive dependency declaration (none currently used). `DcApplication.kt` implements `Configuration.Provider` and `AndroidManifest.xml` has the `tools:node="remove"` block for `WorkManagerInitializer`.
+**Verification:** Search production app/feature code for direct `WorkManager` and `AlarmManager`
+usage; only runtime scheduling infrastructure and WorkManager configuration/Hilt worker wiring may
+use the framework types. `grep GlobalScope` across `app/src`, `runtime/`, and `data/` is empty.
 
-**Exceptions:** None yet.
+### BG-02 — Exact alarms are opt-in and restoreable
+
+**Rule:** Apps declare the appropriate exact-alarm and `RECEIVE_BOOT_COMPLETED` permissions,
+handle `NeedsExactAlarmPermission` in UI, and use an app-specific `DcAlarmReceiver` for delivery.
+The receiver must do only short user-visible work or return `HandOff` for WorkManager.
+
+**Why:** Exact-alarm grants are special app access and may be denied/revoked. AlarmManager clears
+scheduled alarms during reboot and can remove them when exact-alarm access is revoked; durable
+storage plus restore is necessary for a reminder product to retain user intent.
+
+**Verification:** Unit tests cover normal, DST gap/overlap, and weekly occurrence calculations;
+the module test suite verifies retry/interval and alarm-codec policy. Instrumented tests for
+`WorkManagerTestInitHelper` and real boot broadcasts remain device/emulator work.
 
 ## Testing / validation
 
-`ArticlesSyncWorker.doWork()` is not unit- or instrumented-tested here: exercising it for real requires either a `WorkManager` `TestDriver`/instrumented test (needs an emulator/device, unavailable in this environment) or hand-rolling a fake that bypasses `CoroutineWorker`'s framework wiring, which would test the fake more than the worker. This is a known, documented gap — same honesty pattern as `GreetingScreenTest`'s instrumented tests never having run here. `ArticlesRepository.refresh()` (the logic the worker calls) is already covered by `ArticlesViewModelTest`, so the worker's one genuinely untested seam is the thin `doWork()` → `Result` mapping and the best-effort notification post.
+The JVM suite verifies date/time and policy logic. Android framework integrations (actual alarm
+delivery and WorkManager `TestDriver`) require an emulator/device and are intentionally not claimed
+as executed by host-only Gradle tasks.
 
 ## Related documents
 
 - [`09-concurrency-and-threading.md`](09-concurrency-and-threading.md)
-- [`13-permissions.md`](13-permissions.md) (PERM-01 — the notification this worker posts)
-- [`23-decision-log.md`](23-decision-log.md) (DEC-04 — why this use case exists)
+- [`13-permissions.md`](13-permissions.md)
+- [`23-decision-log.md`](23-decision-log.md)

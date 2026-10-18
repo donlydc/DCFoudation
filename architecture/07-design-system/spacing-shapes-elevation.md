@@ -8,9 +8,9 @@ Layout spacing scale, corner-radius scale, and elevation policy.
 
 ## Current implementation
 
-- **Spacing:** `tokens/SpacingTokens.kt` (see [`tokens.md`](tokens.md)). Not yet consumed anywhere — `MainActivity.kt`'s only padding comes from `Scaffold`'s own `innerPadding`, not a token or literal, so there is nothing to migrate yet.
-- **Shapes:** `tokens/ShapeTokens.kt` → `theme/DcShapes.kt` maps `Small`/`Medium`/`Large` onto `MaterialTheme.shapes`. `DcButton` inherits Material3's default button shape (`MaterialTheme.shapes.*` via the underlying `Button`), not yet explicitly overridden.
-- **Elevation:** Not implemented. Material3's built-in elevation scale is used as-is; no DC elevation token exists because no component has needed one yet (anti-overengineering constraint — `plan/CLAUDE_IMPLEMENTATION_PLAN.md` §7).
+- **Spacing:** `DcSpacing` provides 4/8/12/16/24/32/48dp steps through `LocalDcSpacing`; components and feature UI consume that overridable semantic scale.
+- **Shapes:** `DcShapes` maps 4/8/12/16/20dp onto Material `extraSmall` through `extraLarge`. Chips use small (8dp), fields/drawer items medium (12dp), cards and banners large (16dp), and dialogs/sheets extra-large (20dp).
+- **Elevation/stroke:** `StrokeTokens.Hairline` is 1dp; `ElevationTokens.Level0/Level1` are 0dp/1dp. Surfaces prefer an outline before adding elevation. `DcCard` is outlined/0dp by default and exposes an elevated/1dp variant for busy backgrounds.
 
 ## Rules
 
@@ -18,7 +18,7 @@ No new rule IDs — governed by [`README.md`](README.md) DS-03.
 
 ## Testing / validation
 
-`grep '\.dp'` and `RoundedCornerShape(` outside `ui/designsystem/` — currently zero hits in `app/src`.
+`grep '\.dp'` and `RoundedCornerShape(` outside `ui/designsystem/` and showcase-only reference UI; each remaining hit requires a documented geometric exception.
 
 ## Related documents
 

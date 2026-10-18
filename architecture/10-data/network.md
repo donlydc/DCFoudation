@@ -4,7 +4,7 @@
 
 ## Current implementation
 
-`:data:network` owns business-neutral Retrofit/OkHttp construction, Kotlin serialization configuration, debug-only BASIC HTTP logging, and `NetworkResult`/`safeApiCall`. The `articles` feature owns `ArticlesApiService`, DTOs and `ArticlesNetworkDataSource`; expected I/O/HTTP failures are mapped before they reach the repository or ViewModel.
+`:data:network` owns business-neutral Retrofit/OkHttp construction, Kotlin serialization configuration, debug-only BASIC HTTP logging, and `NetworkResult`/`safeApiCall`. `NetworkClientConfig` centralizes timeouts, static headers and request-id injection without adding implicit retries; an optional feature-owned `HttpErrorBodyParser` may map a known error payload to a display-safe message. Expected I/O/HTTP/serialization failures are mapped before they reach the repository or ViewModel. The `articles` feature owns `ArticlesApiService`, DTOs and `ArticlesNetworkDataSource`.
 
 ## Rules
 

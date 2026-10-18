@@ -130,6 +130,18 @@ If the repository contains `architecture/`, those documents are more specific th
 
 ---
 
+## 3a. CodeGraph first (code lookup)
+
+This repository is indexed by CodeGraph (`.codegraph/`, local-only and git-ignored). For **any** question about code — where something is, how it works, what a change affects — use CodeGraph **before** `Grep`, `Glob`, `find`, or opening files:
+
+- MCP tool (preferred): `codegraph_explore` with a natural-language question or a bag of symbol/file names, `projectPath` = repo root. It returns verbatim line-numbered source plus call paths and blast radius; treat that source as already read.
+- Shell fallback: `codegraph explore "<symbols or question>"`.
+- Refresh after large edits: `codegraph sync`. Re-run `codegraph init -y` only if the index is missing.
+
+Order of tools: **CodeGraph → Graphify (architecture/community map, §4) → targeted Grep/Read**. Only fall back to Grep/Read for non-code files (docs, Gradle, XML) or when CodeGraph returns nothing relevant. Apply the same rule in every subagent prompt that explores code.
+
+---
+
 ## 4. Using Graphify
 
 Graphify is the preferred **repository map** for architecture discovery and cross-module impact analysis.
@@ -208,7 +220,7 @@ For each task:
 
 1. Read this `CLAUDE.md`.
 2. If available, read `architecture/00-index.md` and `architecture/01-overview-and-invariants.md`.
-3. Read `graphify-out/GRAPH_REPORT.md` before broad repository exploration.
+3. Use CodeGraph (`codegraph_explore`) first for code lookup (§3a); read `graphify-out/GRAPH_REPORT.md` before broad architecture-level exploration.
 4. Identify the smallest relevant modules/files.
 5. Read only task-specific architecture documents.
 6. Verify relevant source/build/test files.
@@ -220,7 +232,7 @@ For each task:
 
 - Do not preload the entire repository.
 - Do not preload the entire `architecture/` directory.
-- Prefer Graphify → targeted search → targeted reads.
+- Prefer CodeGraph → Graphify → targeted search → targeted reads.
 - Prefer symbol/file-level context over full directory dumps.
 - Summarize large tool output before carrying it forward.
 - Avoid reopening unchanged files without a reason.

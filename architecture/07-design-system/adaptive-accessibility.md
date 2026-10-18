@@ -9,7 +9,7 @@ Window-size/adaptive-layout policy and accessibility floors (touch target, font 
 ## Current implementation
 
 - **Accessibility:** `tokens/AccessibilityTokens.kt` defines `MinTouchTarget` (48dp), enforced by interactive button/input/list-row components (DS-02). Loading and input errors expose screen-reader semantics; password visibility labels come from the caller for localization. Typography uses `sp` units throughout (`DcTypography`) and layouts use directional-safe Compose APIs.
-- **Adaptive/window-size:** Not implemented. The app is a single `Scaffold` with no layout that would differ across window-size classes. No `WindowSizeClass` dependency or breakpoint policy exists yet — will be added when a screen actually needs to branch on window size (Phase E+), not preemptively.
+- **Adaptive/window-size:** `DcNavigationSuite` owns the only shared adaptive policy today. Material3 Adaptive renders the same item list as a bottom bar, rail or permanent drawer based on window information; feature code remains independent of adaptive implementation types. Other pane/layout branching remains caller-owned until a real list-detail use case needs a shared policy.
 
 ## Rules
 
@@ -18,6 +18,8 @@ Governed by [`README.md`](README.md) DS-02. No new rule IDs here.
 ## Testing / validation
 
 Inspect new interactive components for `defaultMinSize`/touch-target sizing as they're added.
+
+`DcChip` is visually compact while Material supplies the minimum interactive touch target around it. `DcStatusChip` is a non-interactive label, so it intentionally has no 48dp visual minimum; its required text and indicator prevent color-only state communication.
 
 ## Related documents
 

@@ -8,10 +8,11 @@ How the design system is visually verified without a running app.
 
 ## Current implementation
 
-`catalog/DesignSystemCatalog.kt`:
+`catalog/DesignSystemCatalog.kt` is organized as fourteen visual checks:
 
-- `DesignSystemCatalog()` — a plain `Column` exercising text/button, feedback states, controlled inputs and the list-row component with tokenized spacing/padding.
-- `DesignSystemCatalogLightPreview` / `DesignSystemCatalogDarkPreview` — `@Preview` composables wrapping the catalog in `DcTheme(darkTheme = false/true, dynamicColor = false)`. `dynamicColor` is forced off in previews so they render the token-defined palette deterministically instead of whatever dynamic color the preview host happens to compute.
+- color roles; typography; buttons; fields; app bars; adaptive navigation; drawer; icon buttons; cards/lists; chips; dialogs; sheet/layout; states; and spacing/shapes.
+- `DesignSystemCatalog()` remains scrollable and runnable; the debug app exposes it as a navigation destination.
+- `DcThemePreviews`, `DcFontScalePreviews`, and `DcWindowPreviews` eliminate repeated preview boilerplate for color, scale and width coverage. The catalog uses `DcTheme`'s deterministic default (`dynamicColor = false`).
 
 This is a manual catalog, not a generated one — there is no Paparazzi/screenshot-test tooling yet (that belongs to Phase I, `17-testing.md`, if adopted at all).
 

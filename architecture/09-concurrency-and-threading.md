@@ -8,9 +8,9 @@ Dispatcher ownership policy and how ViewModels/repositories move work off the ma
 
 ## Current implementation
 
-`:runtime:concurrency` (plain Kotlin/JVM module, no Android/DI dependency — INV-03) owns `DispatcherProvider` (`main`/`mainImmediate`/`io`/`default`) and `DefaultDispatcherProvider`. The P0 `:testing` module owns `FakeDispatcherProvider`, keeping a test-only type out of production artifacts. `:app`'s `di/ConcurrencyModule.kt` provides the Hilt singleton binding — see the cross-module-binding note in [`08-dependency-injection-hilt.md`](08-dependency-injection-hilt.md).
+`:runtime:concurrency` (plain Kotlin/JVM module, no Android/DI dependency — INV-03) owns `DispatcherProvider` (`main`/`mainImmediate`/`io`/`default`) and `DefaultDispatcherProvider`. It also provides optional process/screen concurrency policies: `AppCoroutineScope`, dispatcher shortcuts, `RetryPolicy`, `SingleFlight`, atomic `JobRegistry` launch policies, `stateInWhileSubscribed`, and `throttleFirst`. The P0 `:testing` module owns `FakeDispatcherProvider`, keeping a test-only type out of production artifacts. `:app`'s `di/ConcurrencyModule.kt` provides the Hilt singleton dispatcher binding, while `DcApplication` owns the process-lifetime scope used for startup scheduling — see the cross-module-binding note in [`08-dependency-injection-hilt.md`](08-dependency-injection-hilt.md).
 
-`GreetingViewModel` uses `dispatcherProvider.default` via `withContext(...)` around `greetingProvider.greetingFor(...)` — the computation itself is trivial today, but the pattern is what matters: no `GreetingViewModel` code references `kotlinx.coroutines.Dispatchers` directly. `viewModelScope` owns every coroutine the ViewModel launches; nothing uses `GlobalScope`.
+`GreetingViewModel` uses `dispatcherProvider.default` via `withContext(...)` around `greetingProvider.greetingFor(...)` — the computation itself is trivial today, but the pattern is what matters: no `GreetingViewModel` code references `kotlinx.coroutines.Dispatchers` directly. `viewModelScope` owns every coroutine the ViewModel launches; `DcApplication` owns its explicit `AppCoroutineScope`; nothing uses `GlobalScope`. Shared jobs preserve cancellation: retries never retry `CancellationException`, workers rethrow it, and one cancelled `SingleFlight` waiter does not cancel other waiters or the application-owned execution.
 
 ## Rules
 
@@ -32,7 +32,7 @@ Dispatcher ownership policy and how ViewModels/repositories move work off the ma
 
 ## Testing / validation
 
-`GreetingViewModelTest` uses `FakeDispatcherProvider(Dispatchers.Main)` (with `Dispatchers.Main` already swapped to a `StandardTestDispatcher` by `MainDispatcherRule`) so every coroutine the ViewModel launches — including the `withContext(dispatcherProvider.default)` hop — runs on the same virtual-time scheduler `runTest`/`advanceUntilIdle()` controls.
+`GreetingViewModelTest` uses `FakeDispatcherProvider(Dispatchers.Main)` (with `Dispatchers.Main` already swapped to a `StandardTestDispatcher` by `MainDispatcherRule`) so every coroutine the ViewModel launches — including the `withContext(dispatcherProvider.default)` hop — runs on the same virtual-time scheduler `runTest`/`advanceUntilIdle()` controls. `:runtime:concurrency:test` additionally covers retry ceilings/backoff, Flow throttling, keyed job cancellation/atomic idle launch, `SingleFlight` coalescing, immediate completion cleanup, and waiter cancellation.
 
 ## Related documents
 

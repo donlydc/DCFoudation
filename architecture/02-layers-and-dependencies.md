@@ -8,7 +8,7 @@ Dependency direction rules between layers/modules, and how they are verified. Do
 
 ## Current implementation
 
-Verified against `settings.gradle.kts`: the repository has 13 modules — `:foundation`, `:app`, `:ui:designsystem`, `:runtime:{concurrency,background}`, `:data:{preferences,network,database}`, `:platform:{navigation,permission}`, `:security`, `:observability`, and `:testing`. `:foundation` owns minimal Android-free shared contracts, including `AppError`; Hilt bindings and product-specific wiring live in `:app`; reusable production modules do not depend on feature implementations. `:testing` is consumed only from test configurations. `greeting` and `articles` are still packages inside `:app`, so feature-to-feature rules remain enforceable at package/import level until a real ownership or build boundary justifies feature modules.
+Verified against `settings.gradle.kts`: the repository has 13 modules — `:foundation`, `:app`, `:ui:designsystem`, `:runtime:{concurrency,scheduling}`, `:data:{preferences,network,database}`, `:platform:{navigation,permission}`, `:security`, `:observability`, and `:testing`. `:foundation` owns minimal Android-free shared contracts, including `AppError`; Hilt bindings and product-specific wiring live in `:app`; reusable production modules do not depend on feature implementations. `:testing` is consumed only from test configurations. `greeting` and `articles` are still packages inside `:app`, so feature-to-feature rules remain enforceable at package/import level until a real ownership or build boundary justifies feature modules.
 
 ## Target layer direction
 
