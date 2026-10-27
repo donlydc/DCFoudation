@@ -5,13 +5,62 @@ on:
     branches: [main, master]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  # MP:R2.3 / MP:BLD-01 (KD-02). Fast, Gradle-free, blocking. Runs the checker's own unit tests,
+  # the module-boundary check, then the full architecture-as-context drift check.
+  architecture:
+    name: Architecture checks (blocking)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install checker dependencies
+        run: python3 -m pip install pyyaml
+
+      - name: Checker self-tests
+        run: python3 -m unittest discover -s tools -p 'test_*.py'
+
+      - name: Module boundary check (KD-02)
+        run: python3 tools/check_architecture.py --boundaries-only
+
+      - name: Architecture drift check
+        run: python3 tools/check_architecture.py --md reports/architecture-check.md --json reports/architecture-check.json
+
+      - name: Upload architecture report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-report
+          path: |
+            reports/architecture-check.md
+            reports/architecture-check.json
+          if-no-files-found: warn
+
+  # MP:R2.3 / MP:BLD-04. Blocking. Gradle is launched on JDK 21; the Gradle daemon itself needs the
+  # toolchain in gradle/gradle-daemon-jvm.properties (JDK 25) and the Kotlin modules use JDK 11 toolchains.
+  # Both are auto-provisioned from api.foojay.io (foojay-resolver-convention in settings.gradle.kts), so this
+  # job needs outbound access to foojay.io, dl.google.com and the Gradle/Maven repositories.
+  build:
+    name: Unit tests, lint, assemble (blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Gradle launcher; daemon/Kotlin toolchains are provisioned by foojay)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -20,8 +69,19 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Unit tests
+      # Android modules + :app (Android-variant task; does not select the dc.kotlin.jvm modules).
+      - name: Unit tests (Android modules)
         run: ./gradlew testDebugUnitTest --console=plain
+
+      # dc.kotlin.jvm modules expose `test`, not `testDebugUnitTest`, so they need explicit selection.
+      - name: Unit tests (JVM modules)
+        run: ./gradlew :foundation:test :runtime:concurrency:test --console=plain
+
+      # build-logic is a separate build included via pluginManagement { includeBuild("build-logic") } and has its
+      # own settings.gradle.kts (it reads ../gradle/libs.versions.toml), so it is built standalone with -p.
+      # Root gradle.properties and the daemon-JVM criteria of the root build do not apply to this invocation.
+      - name: Unit tests (build-logic)
+        run: ./gradlew -p build-logic test --console=plain
 
       - name: Lint
         run: ./gradlew lintDebug --console=plain
@@ -34,4 +94,64 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: "**/build/test-results/**/*.xml"
+          path: |
+            **/build/test-results/**/*.xml
+            **/build/reports/tests/**
+          if-no-files-found: warn
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports
+          path: |
+            **/build/reports/lint-results-*.html
+            **/build/reports/lint-results-*.xml
+            **/build/reports/lint-results-*.sarif
+          if-no-files-found: warn
+
+  # NON-BLOCKING until a stable emulator runner exists (MP:R2 failure policy: instrumentation becomes blocking
+  # only when the job has a stable runner). `continue-on-error: true` keeps a flaky/failed emulator run from
+  # failing the workflow; a green mark here is NOT evidence that instrumentation tests passed unless the
+  # "Instrumentation tests" step itself shows success. Check the uploaded report, not just the job colour.
+  instrumentation:
+    name: Instrumentation tests (NON-BLOCKING, emulator)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Gradle launcher; daemon/Kotlin toolchains are provisioned by foojay)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Instrumentation tests
+        uses: reactivecircus/android-emulator-runner@v2.33.0
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest --console=plain
+
+      - name: Upload instrumentation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumentation-results
+          path: |
+            **/build/outputs/androidTest-results/**
+            **/build/reports/androidTests/**
+          if-no-files-found: warn

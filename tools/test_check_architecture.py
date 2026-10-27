@@ -89,5 +89,117 @@ class CheckTest(unittest.TestCase):
             self.assertEqual(ca.required_headings(p), [("1", "Real")])
 
 
+RULES_WITH_TEST = RULES + "## Test edges\n```text\n# test-only\n:b -> :a\n```\n"
+
+
+class BoundaryOnlyTest(unittest.TestCase):
+    """KD-02 / MP:R2.1: --boundaries-only must fail on any forbidden, unlisted or unparseable edge."""
+
+    def boundaries(self, a_build="", b_build="", rules=RULES, extra=None):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            make_fixture(root, b_build, doc())
+            (root / "a/build.gradle.kts").write_text(a_build)
+            (root / "architecture/dependency-rules.md").write_text(rules)
+            for rel, text in (extra or {}).items():
+                (root / rel).write_text(text)
+            rep, _ = ca.run_boundaries(root)
+            code = ca.main(["--root", d, "--boundaries-only"])
+        return rep, code
+
+    def errors(self, rep):
+        return [f["message"] for f in rep.findings if f["severity"] == ca.ERROR]
+
+    def test_allowed_edges_pass_without_yaml_or_docs(self):
+        rep, code = self.boundaries(b_build='dependencies { implementation(project(":a")) }')
+        self.assertEqual(self.errors(rep), [])
+        self.assertEqual(code, 0)
+
+    def test_forbidden_edge_fails_in_every_production_form(self):
+        # :a -> :b is only in the PROPOSED block, so it is forbidden
+        for decl in ('implementation(project(":b"))', 'api(project(":b"))', 'compileOnly(project(":b"))',
+                     'ksp(project(":b"))', '"implementation"(project(":b"))', 'api(project(path = ":b"))',
+                     'add("implementation", project(":b"))', 'debugImplementation(project(":b"))'):
+            with self.subTest(decl=decl):
+                rep, code = self.boundaries(a_build="dependencies { %s }" % decl,
+                                            b_build='dependencies { implementation(project(":a")) }')
+                self.assertTrue(any(":a -> :b not allowed" in m for m in self.errors(rep)), self.errors(rep))
+                self.assertEqual(code, 1)
+
+    def test_unlisted_test_edge_fails_and_listed_test_edge_passes(self):
+        a = 'dependencies { implementation(project(":a")) }'
+        b_test = 'dependencies { %s\n testImplementation(project(":a")) }'
+        for decl in ("testImplementation", "androidTestImplementation", "kspTest", "testFixturesApi"):
+            with self.subTest(decl=decl):
+                bld = 'dependencies { implementation(project(":a"))\n %s(project(":a")) }' % decl
+                rep, code = self.boundaries(b_build=bld)  # RULES has no test-only block
+                self.assertTrue(any("test edge :b -> :a not allowed" in m for m in self.errors(rep)), self.errors(rep))
+                self.assertEqual(code, 1)
+                rep, code = self.boundaries(b_build=bld, rules=RULES_WITH_TEST)
+                self.assertEqual(self.errors(rep), [])
+                self.assertEqual(code, 0)
+
+    def test_unparseable_forms_fail_closed(self):
+        for decl in ('implementation(projects.b)', 'testImplementation(platform(project(":a")))'):
+            with self.subTest(decl=decl):
+                rep, code = self.boundaries(b_build='dependencies { implementation(project(":a"))\n %s }' % decl)
+                self.assertTrue(any("unparseable" in m for m in self.errors(rep)), self.errors(rep))
+                self.assertEqual(code, 1)
+
+    def test_commented_edge_is_ignored(self):
+        rep, code = self.boundaries(a_build='// implementation(project(":b"))\n/* api(project(":b")) */',
+                                    b_build='dependencies { implementation(project(":a")) }')
+        self.assertEqual(self.errors(rep), [])
+        self.assertEqual(code, 0)
+
+    def test_string_literals_cannot_hide_edges_from_comment_stripping(self):
+        edge = 'implementation(project(":b"))'  # :a -> :b is forbidden
+        b = 'dependencies { implementation(project(":a")) }'
+        cases = {
+            # (a) `/*` inside one string and `*/` inside a later one must not delete the edge between them
+            "block-in-strings": 'val e = "/META-INF/*.kotlin_module"\ndependencies { %s }\nval x = "**/x"\n' % edge,
+            # (b) `//` inside a string must not swallow the rest of the line
+            "slashes-in-string": 'val u = "a//b"; dependencies { %s }\n' % edge,
+            # (c) `/*` inside a line comment must not open a block comment
+            "block-in-line-comment": '// src/*/java\ndependencies { %s }\nval y = "*/"\n' % edge,
+            "raw-string": 'val r = """ /* \n // """\ndependencies { %s }\nval z = "*/"\n' % edge,
+            "char-quote": "val q = '\"'\ndependencies { %s }\n" % edge,
+        }
+        for name, a_build in cases.items():
+            with self.subTest(case=name):
+                rep, code = self.boundaries(a_build=a_build, b_build=b)
+                self.assertTrue(any(":a -> :b not allowed" in m for m in self.errors(rep)), self.errors(rep))
+                self.assertEqual(code, 1)
+
+    def test_real_comments_are_still_stripped(self):
+        a_build = ('// implementation(project(":b"))\n/* nested /* api(project(":b")) */ implementation(project(":b")) */\n'
+                   'val s = "keep // this"\n')
+        rep, code = self.boundaries(a_build=a_build, b_build='dependencies { implementation(project(":a")) }')
+        self.assertEqual(self.errors(rep), [])
+        self.assertEqual(code, 0)
+
+    def test_app_unknown_target_cycle_and_testing_fail(self):
+        a = 'dependencies { implementation(project(":b")) }'
+        rep, _ = self.boundaries(a_build=a, b_build='dependencies { implementation(project(":a")) }',
+                                 rules=RULES.replace("## PROPOSED", "## Other\n```text\n:a -> :b\n```\n## PROPOSED"))
+        self.assertTrue(any("cycle" in m for m in self.errors(rep)), self.errors(rep))
+        rep, _ = self.boundaries(b_build='dependencies { implementation(project(":a"))\n implementation(project(":app")) }')
+        self.assertTrue(any(":app is forbidden" in m for m in self.errors(rep)), self.errors(rep))
+        self.assertTrue(any(":app: target is not a Gradle module" in m for m in self.errors(rep)), self.errors(rep))
+        rep, _ = self.boundaries(b_build='dependencies { implementation(project(":a"))\n implementation(project(":testing")) }')
+        self.assertTrue(any(":testing in a production configuration" in m for m in self.errors(rep)), self.errors(rep))
+
+    def test_root_build_script_edges_fail(self):
+        rep, code = self.boundaries(b_build='dependencies { implementation(project(":a")) }',
+                                    extra={"build.gradle.kts": 'subprojects { dependencies { implementation(project(":a")) } }'})
+        self.assertTrue(any("root build script declares a project edge" in m for m in self.errors(rep)), self.errors(rep))
+        self.assertEqual(code, 1)
+
+    def test_missing_rules_block_fails(self):
+        rep, code = self.boundaries(rules="# nothing machine-checkable\n")
+        self.assertTrue(any("no machine-checkable" in m for m in self.errors(rep)))
+        self.assertEqual(code, 1)
+
+
 if __name__ == "__main__":
     unittest.main()

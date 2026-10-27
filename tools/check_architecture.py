@@ -7,7 +7,14 @@ Never modifies source or docs; only writes the report files given by --json / --
 
 Exit code: 1 if any ERROR finding, 0 otherwise (WARN allowed), 2 on usage/environment failure.
 
-Usage: python3 tools/check_architecture.py [--root DIR] [--json PATH] [--md PATH]
+`--boundaries-only` (MP:R2.1 / KD-02 / MP:BLD-01) runs just the module-boundary checks: every
+project edge declared in a module build file (any configuration: api, implementation, ksp, test*,
+string-form, `path =` form) must be listed in the allowed-edge block of dependency-rules.md; no
+`:app` consumers, no `:testing` in production configurations, no edge to a non-included module,
+no cycles, and no dependency form the checker cannot parse (fail-closed). It needs neither PyYAML
+nor the docs, so it is fast enough for a pre-commit/CI gate.
+
+Usage: python3 tools/check_architecture.py [--root DIR] [--json PATH] [--md PATH] [--boundaries-only]
 """
 from __future__ import annotations
 
@@ -72,19 +79,92 @@ def module_dir(root: Path, gradle_path: str) -> Path:
     return root / gradle_path.strip(":").replace(":", "/")
 
 
-def parse_build_edges(build_file: Path) -> tuple[set[str], set[str]]:
-    """(production edges, test-only edges) from project(":x") declarations."""
+# `implementation(project(":x"))`, `"kspTest"(project(":x"))`, `api(project(path = ":x"))`, `add("api", project(":x"))`
+_EDGE_RE = re.compile(
+    r'(?:\b(\w+)|"(\w+)")\s*\(\s*project\(\s*(?:path\s*=\s*)?"(:[^"]+)"\s*(?:,[^)]*)?\)\s*\)')
+_ADD_RE = re.compile(r'\badd\(\s*"(\w+)"\s*,\s*project\(\s*(?:path\s*=\s*)?"(:[^"]+)"\s*(?:,[^)]*)?\)\s*\)')
+
+
+_WRAPPERS = {"platform", "enforcedPlatform", "testFixtures", "project", "files", "dep"}
+
+
+def _is_test_conf(conf: str) -> bool:
+    return conf.lower().startswith(("test", "androidtest")) or "Test" in conf
+
+
+def strip_gradle_comments(text: str) -> str:
+    """Remove Kotlin comments, string-aware: `//` and `/* */` (nestable) count only outside "..." / \"\"\"...\"\"\" / '.'
+    literals, so a `/*` or `//` inside a string can never hide a later project edge. String contents are kept
+    verbatim (edges are string arguments). Newlines inside comments are preserved for line numbers."""
+    out: list[str] = []
+    i, n = 0, len(text)
+    while i < n:
+        c = text[i]
+        two = text[i:i + 2]
+        if text.startswith('"""', i):
+            j = text.find('"""', i + 3)
+            j = n if j < 0 else j + 3
+            while j < n and text[j] == '"':  # closing run of 4+ quotes: extra quotes belong to the content
+                j += 1
+            out.append(text[i:j])
+            i = j
+        elif c == '"' or c == "'":
+            j = i + 1
+            while j < n and text[j] != c and text[j] != "\n":
+                j += 2 if text[j] == "\\" else 1
+            j = min(j + 1, n)
+            out.append(text[i:j])
+            i = j
+        elif two == "//":
+            j = text.find("\n", i)
+            i = n if j < 0 else j  # keep the newline itself
+        elif two == "/*":
+            depth, j = 1, i + 2
+            while j < n and depth:
+                if text.startswith("/*", j):
+                    depth, j = depth + 1, j + 2
+                elif text.startswith("*/", j):
+                    depth, j = depth - 1, j + 2
+                else:
+                    j += 1
+            out.append("\n" * text.count("\n", i, j))
+            i = j
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
+def parse_build_edges_ex(build_file: Path) -> tuple[set[str], set[str], list[str]]:
+    """(production edges, test-only edges, unparseable project references)."""
     prod: set[str] = set()
     test: set[str] = set()
+    unparsed: list[str] = []
     if not build_file.exists():
-        return prod, test
-    text = re.sub(r"//[^\n]*", "", build_file.read_text(encoding="utf-8"))
-    for m in re.finditer(r'(\w+)\(\s*project\(\s*"(:[^"]+)"\s*\)\s*\)', text):
+        return prod, test, unparsed
+    text = strip_gradle_comments(build_file.read_text(encoding="utf-8"))
+    matched_spans: list[tuple[int, int]] = []
+    for m in _EDGE_RE.finditer(text):
+        conf, target = (m.group(1) or m.group(2)), m.group(3)
+        if conf in _WRAPPERS:  # implementation(platform(project(":x"))): configuration is the outer call -> unparseable
+            continue
+        (test if _is_test_conf(conf) else prod).add(target)
+        matched_spans.append(m.span())
+    for m in _ADD_RE.finditer(text):
         conf, target = m.group(1), m.group(2)
-        if conf.lower().startswith(("test", "androidtest")) or "Test" in conf:
-            test.add(target)
-        else:
-            prod.add(target)
+        (test if _is_test_conf(conf) else prod).add(target)
+        matched_spans.append(m.span())
+    # fail closed: any other `project(` call or type-safe `projects.` accessor is an edge we cannot classify
+    for m in re.finditer(r'\bproject\(|\bprojects\.\w', text):
+        if not any(a <= m.start() < b for a, b in matched_spans):
+            line = text.count("\n", 0, m.start()) + 1
+            unparsed.append(f"line {line}: {text[m.start():m.start() + 60].splitlines()[0]}")
+    return prod, test, unparsed
+
+
+def parse_build_edges(build_file: Path) -> tuple[set[str], set[str]]:
+    """(production edges, test-only edges) from project(":x") declarations."""
+    prod, test, _ = parse_build_edges_ex(build_file)
     return prod, test
 
 
@@ -265,6 +345,77 @@ def check_links(rep: Report, root: Path) -> None:
                 rep.add(ERROR, "links", str(f.relative_to(root)), f"broken relative link: {href}")
 
 
+def check_edges(rep: Report, root: Path, includes: list[str], by_path: dict, stats: dict, check_map: bool) -> None:
+    """KD-02 boundary check. With check_map=False only the build files vs. allowed-edge block are compared."""
+    rules = root / "architecture" / "dependency-rules.md"
+    if not rules.is_file():
+        rep.add(ERROR, "edges", "dependency-rules.md", "architecture/dependency-rules.md missing")
+        return
+    allowed_prod, allowed_test = parse_allowed(rules)
+    if not allowed_prod:
+        rep.add(ERROR, "edges", "dependency-rules.md", "no machine-checkable allowed-edge block parsed")
+    actual_prod: dict[str, set[str]] = {}
+    for gp in includes:
+        bf = module_dir(root, gp) / "build.gradle.kts"
+        if not bf.is_file():
+            rep.add(ERROR, "edges", gp, f"build file missing: {bf.relative_to(root)}")
+            continue
+        prod, test, unparsed = parse_build_edges_ex(bf)
+        actual_prod[gp] = prod
+        for u in unparsed:
+            rep.add(ERROR, "edges", gp, f"unparseable project dependency form ({u}); use implementation(project(\":x\")) or extend the checker")
+        if gp not in allowed_prod:
+            rep.add(ERROR, "edges", gp, "module has no row in the allowed-edge table")
+        for t in sorted(prod - allowed_prod.get(gp, set())):
+            rep.add(ERROR, "edges", gp, f"edge {gp} -> {t} not allowed by dependency-rules.md")
+        for t in sorted(test - allowed_test.get(gp, set())):
+            rep.add(ERROR, "edges", gp, f"test edge {gp} -> {t} not allowed (test-only block)")
+        for t in sorted(prod | test):
+            if t == ":app":
+                rep.add(ERROR, "edges", gp, f"{gp} -> :app is forbidden (DEP-01)")
+            if t not in includes:
+                rep.add(ERROR, "edges", gp, f"{gp} -> {t}: target is not a Gradle module in settings")
+        if ":testing" in prod:
+            rep.add(ERROR, "edges", gp, f"{gp} -> :testing in a production configuration (BLD-03)")
+        m = by_path.get(gp) if check_map else None
+        if m is not None:
+            cm_dep, cm_test = set(m.get("depends_on") or []), set(m.get("test_depends_on") or [])
+            if cm_dep != prod:
+                rep.add(ERROR, "edges", gp, f"context-map depends_on != build file (map-only: {sorted(cm_dep - prod)}, build-only: {sorted(prod - cm_dep)})")
+            if cm_test != test:
+                rep.add(ERROR, "edges", gp, f"context-map test_depends_on != build file (map-only: {sorted(cm_test - test)}, build-only: {sorted(test - cm_test)})")
+    for gp in allowed_prod:
+        if gp not in includes:
+            rep.add(WARN, "edges", gp, "allowed-edge table row for module not in settings.gradle.kts")
+    # root build script must not smuggle in cross-module edges (e.g. subprojects { dependencies { ... } })
+    rb = root / "build.gradle.kts"
+    if rb.is_file():
+        _, _, root_unparsed = parse_build_edges_ex(rb)
+        rp, rt, _ = parse_build_edges_ex(rb)
+        for u in root_unparsed:
+            rep.add(ERROR, "edges", "build.gradle.kts", f"root build script references a project dependency ({u})")
+        for t in sorted(rp | rt):
+            rep.add(ERROR, "edges", "build.gradle.kts", f"root build script declares a project edge -> {t}")
+    cyc = find_cycle(actual_prod)
+    if cyc:
+        rep.add(ERROR, "edges", "graph", "dependency cycle: " + " -> ".join(cyc))
+    stats["edges"] = sum(len(v) for v in actual_prod.values())
+
+
+def run_boundaries(root: Path) -> tuple[Report, dict]:
+    """KD-02 only: build-file project edges vs. dependency-rules.md allowed block. No YAML, no docs checks."""
+    rep = Report()
+    stats: dict = {}
+    settings = root / "settings.gradle.kts"
+    if not settings.is_file():
+        rep.add(ERROR, "settings", "settings.gradle.kts", "settings.gradle.kts missing")
+        return rep, stats
+    includes, _ = parse_settings(settings)
+    stats["gradle_modules"] = len(includes)
+    check_edges(rep, root, includes, {}, stats, check_map=False)
+    return rep, stats
+
+
 def run(root: Path) -> tuple[Report, dict]:
     rep = Report()
     arch = root / "architecture"
@@ -349,45 +500,7 @@ def run(root: Path) -> tuple[Report, dict]:
                 rep.add(ERROR, "feature", subj, f"depends_on_modules references unknown module '{dep}'")
 
     # 5. edges
-    rules = arch / "dependency-rules.md"
-    if not rules.is_file():
-        rep.add(ERROR, "edges", "dependency-rules.md", "architecture/dependency-rules.md missing")
-    else:
-        allowed_prod, allowed_test = parse_allowed(rules)
-        if not allowed_prod:
-            rep.add(ERROR, "edges", "dependency-rules.md", "no machine-checkable allowed-edge block parsed")
-        actual_prod: dict[str, set[str]] = {}
-        for gp in includes:
-            bf = module_dir(root, gp) / "build.gradle.kts"
-            prod, test = parse_build_edges(bf)
-            actual_prod[gp] = prod
-            if gp not in allowed_prod:
-                rep.add(ERROR, "edges", gp, "module has no row in the allowed-edge table")
-            for t in sorted(prod - allowed_prod.get(gp, set())):
-                rep.add(ERROR, "edges", gp, f"edge {gp} -> {t} not allowed by dependency-rules.md")
-            for t in sorted(test - allowed_test.get(gp, set())):
-                rep.add(ERROR, "edges", gp, f"test edge {gp} -> {t} not allowed (test-only block)")
-            for t in sorted(prod | test):
-                if t == ":app":
-                    rep.add(ERROR, "edges", gp, f"{gp} -> :app is forbidden (DEP-01)")
-                if t not in includes:
-                    rep.add(ERROR, "edges", gp, f"{gp} -> {t}: target is not a Gradle module in settings")
-            if ":testing" in prod:
-                rep.add(ERROR, "edges", gp, f"{gp} -> :testing in a production configuration (BLD-03)")
-            m = by_path.get(gp)
-            if m is not None:
-                cm_dep, cm_test = set(m.get("depends_on") or []), set(m.get("test_depends_on") or [])
-                if cm_dep != prod:
-                    rep.add(ERROR, "edges", gp, f"context-map depends_on != build file (map-only: {sorted(cm_dep - prod)}, build-only: {sorted(prod - cm_dep)})")
-                if cm_test != test:
-                    rep.add(ERROR, "edges", gp, f"context-map test_depends_on != build file (map-only: {sorted(cm_test - test)}, build-only: {sorted(test - cm_test)})")
-        for gp in allowed_prod:
-            if gp not in includes:
-                rep.add(WARN, "edges", gp, "allowed-edge table row for module not in settings.gradle.kts")
-        cyc = find_cycle(actual_prod)
-        if cyc:
-            rep.add(ERROR, "edges", "graph", "dependency cycle: " + " -> ".join(cyc))
-        stats["edges"] = sum(len(v) for v in actual_prod.values())
+    check_edges(rep, root, includes, by_path, stats, check_map=True)
 
     # 7. links
     check_links(rep, root)
@@ -424,15 +537,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--root", default=None, help="repository root (default: parent of tools/)")
     ap.add_argument("--json", dest="json_path")
     ap.add_argument("--md", dest="md_path")
+    ap.add_argument("--boundaries-only", action="store_true",
+                    help="only the KD-02 module-boundary check (no PyYAML needed); exit 1 on any forbidden/unlisted/unparseable edge")
     args = ap.parse_args(argv)
-    if yaml is None:
+    if yaml is None and not args.boundaries_only:
         print("check_architecture: PyYAML is required (pip install pyyaml); no fallback parser is bundled.", file=sys.stderr)
         return 2
     root = Path(args.root).resolve() if args.root else Path(__file__).resolve().parent.parent
-    rep, stats = run(root)
+    rep, stats = run_boundaries(root) if args.boundaries_only else run(root)
 
-    print(f"Architecture check: ERROR {rep.count(ERROR)}  WARN {rep.count(WARN)}  INFO {rep.count(INFO)}  "
-          f"({stats.get('modules', 0)} modules, {stats.get('features', 0)} features, {stats.get('edges', 0)} edges)")
+    if args.boundaries_only:
+        print(f"Boundary check (KD-02): ERROR {rep.count(ERROR)}  WARN {rep.count(WARN)}  "
+              f"({stats.get('gradle_modules', 0)} modules, {stats.get('edges', 0)} production edges)")
+    else:
+        print(f"Architecture check: ERROR {rep.count(ERROR)}  WARN {rep.count(WARN)}  INFO {rep.count(INFO)}  "
+              f"({stats.get('modules', 0)} modules, {stats.get('features', 0)} features, {stats.get('edges', 0)} edges)")
     by_check: dict[str, int] = {}
     for f in rep.findings:
         if f["severity"] == ERROR:
