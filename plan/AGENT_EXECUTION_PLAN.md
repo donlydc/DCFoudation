@@ -97,6 +97,13 @@ Wave 6  R8, R9  chỉ khi người dùng xác nhận consumer thật
 | C2 Reference app journeys | R6.2 | `app/**`, `architecture/modules/app.md`, `architecture/features/**` |
 | C3 Developer experience | R7.1, R7.2, R7.3 | `build-logic/**` (generator), `README.md`, `CHANGELOG.md`, DEC PROPOSED (qua mục D) |
 
+### Lượt triển khai gộp (single pass, Sonnet 5.5)
+
+Theo yêu cầu người dùng, Wave B và Wave C chạy **cùng một lượt** (B1, B2, B3, C1, C2, C3 song song) cộng một agent
+`DOC` hợp nhất tài liệu (là agent duy nhất được sửa `architecture/**`). Các lane đọc hợp đồng `:foundation`/`:runtime:*`
+trong working tree (lane A3), không sửa `foundation/**`, `runtime/**`, `testing/**`. Lane C2 dùng API navigation hiện có;
+C1 chỉ thêm API theo hướng tương thích. Mỗi lane → Sonnet review → commit; sau cùng Opus final review một lượt.
+
 ### Quy tắc lane
 
 - Tệp dùng chung (`architecture/context-map.yaml`, `module-map.md`, `22-known-deviations.md`, `23-decision-log.md`,
