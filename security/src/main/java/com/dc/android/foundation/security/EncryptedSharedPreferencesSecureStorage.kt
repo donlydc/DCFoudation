@@ -18,53 +18,68 @@ private const val PREFS_FILE_NAME = "dc_foundation_secure_prefs"
  *
  * [MasterKey]/[EncryptedSharedPreferences] construction can throw [GeneralSecurityException] (key
  * generation/Keystore failure) or [IOException] (prefs file corruption/access failure). Per
- * ERR-01, those two expected infra exception types are caught at [sharedPreferences] and
+ * ERR-01, those two expected infra exception types are caught in `createEncryptedPreferences` and
  * re-wrapped as [SecureStorageUnavailableException]; on the read path ([getString]) that maps to
  * `null` (safe default, mirrors `DataStorePreferencesDataSource.getInt`'s `IOException` ->
  * `emptyPreferences()` mapping) rather than crashing the caller. Anything unexpected propagates.
  */
-class EncryptedSharedPreferencesSecureStorage(
-    private val context: Context,
-    private val dispatcherProvider: DispatcherProvider
+class EncryptedSharedPreferencesSecureStorage internal constructor(
+    private val dispatcherProvider: DispatcherProvider,
+    private val preferencesProvider: () -> SharedPreferences
 ) : SecureStorage {
 
+    constructor(context: Context, dispatcherProvider: DispatcherProvider) :
+        this(dispatcherProvider, { createEncryptedPreferences(context) })
+
+    /** Failure contract: throws [SecureStorageUnavailableException] if the store cannot be opened. */
     override suspend fun putString(key: String, value: String) {
         withContext(dispatcherProvider.io) {
-            sharedPreferences().edit().putString(key, value).apply()
+            preferencesProvider().edit().putString(key, value).apply()
         }
     }
 
+    /**
+     * Returns `null` when the store cannot be opened ([SecureStorageUnavailableException]) or the
+     * stored value can no longer be decrypted (e.g. Keystore key invalidated -> `SecurityException`
+     * from `EncryptedSharedPreferences`). The store is never silently cleared or re-keyed here
+     * (no migration/backup plan, MP 4.9); "undecryptable" is surfaced as "absent".
+     */
     override suspend fun getString(key: String): String? =
         withContext(dispatcherProvider.io) {
             try {
-                sharedPreferences().getString(key, null)
+                preferencesProvider().getString(key, null)
             } catch (cause: SecureStorageUnavailableException) {
+                null
+            } catch (cause: SecurityException) {
                 null
             }
         }
 
+    /** Failure contract: throws [SecureStorageUnavailableException] if the store cannot be opened. */
     override suspend fun remove(key: String) {
         withContext(dispatcherProvider.io) {
-            sharedPreferences().edit().remove(key).apply()
+            preferencesProvider().edit().remove(key).apply()
         }
     }
 
-    private fun sharedPreferences(): SharedPreferences {
-        try {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            return EncryptedSharedPreferences.create(
-                context,
-                PREFS_FILE_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (cause: GeneralSecurityException) {
-            throw SecureStorageUnavailableException(cause)
-        } catch (cause: IOException) {
-            throw SecureStorageUnavailableException(cause)
+    private companion object {
+        fun createEncryptedPreferences(context: Context): SharedPreferences {
+            try {
+                val masterKey = MasterKey.Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+                return EncryptedSharedPreferences.create(
+                    context,
+                    PREFS_FILE_NAME,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+            } catch (cause: GeneralSecurityException) {
+                throw SecureStorageUnavailableException(cause)
+            } catch (cause: IOException) {
+                throw SecureStorageUnavailableException(cause)
+            }
         }
     }
 }

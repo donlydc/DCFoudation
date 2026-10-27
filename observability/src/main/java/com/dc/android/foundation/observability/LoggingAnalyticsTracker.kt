@@ -9,11 +9,21 @@ private const val LOG_TAG = "Analytics"
  * implementation behind the same [AnalyticsTracker] interface once a vendor decision is made —
  * no call site should need to change.
  *
- * Never pass a secret/token/PII/full content body in [AnalyticsTracker.trackEvent]'s properties
- * (SEC-01) — this class does no redaction, the caller is responsible.
+ * Event name and properties pass through [Redactor] before logging (MP:SEC-04) — a safety net
+ * only; callers must still never pass a secret/token/PII/full content body (SEC-01).
+ *
+ * Error isolation (MP:OBS-02, PROPOSED): analytics is best-effort telemetry, so a failure in the
+ * [Logger] (or in rendering the properties) is swallowed and never reaches the caller.
  */
 class LoggingAnalyticsTracker(private val logger: Logger) : AnalyticsTracker {
     override fun trackEvent(name: String, properties: Map<String, String>) {
-        logger.d(LOG_TAG, "trackEvent: name=$name properties=$properties")
+        try {
+            logger.d(
+                LOG_TAG,
+                "trackEvent: name=${Redactor.redact(name)} properties=${Redactor.redactProperties(properties)}"
+            )
+        } catch (_: Exception) {
+            // Intentionally swallowed: telemetry must never crash the app (OBS-02).
+        }
     }
 }

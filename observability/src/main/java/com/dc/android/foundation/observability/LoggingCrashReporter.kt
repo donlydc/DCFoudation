@@ -9,15 +9,27 @@ private const val LOG_TAG = "CrashReporter"
  * same [CrashReporter] interface once a vendor decision is made — no call site should need to
  * change.
  *
- * Never pass a secret/token/PII/full content body to [recordException]/[log] (SEC-01) — this
- * class does no redaction, the caller is responsible.
+ * Breadcrumbs pass through [Redactor] (MP:SEC-04); [recordException] logs only the exception
+ * class name as its message (the throwable itself is still forwarded to the [Logger]). Callers
+ * must still never pass a secret/token/PII/full content body (SEC-01).
+ *
+ * Error isolation (MP:OBS-02, PROPOSED): a failure in the [Logger] is swallowed so reporting a
+ * crash can never cause another crash.
  */
 class LoggingCrashReporter(private val logger: Logger) : CrashReporter {
     override fun recordException(throwable: Throwable) {
-        logger.e(LOG_TAG, "recordException: ${throwable::class.simpleName}", throwable)
+        try {
+            logger.e(LOG_TAG, "recordException: ${throwable::class.simpleName}", throwable)
+        } catch (_: Exception) {
+            // Intentionally swallowed (OBS-02).
+        }
     }
 
     override fun log(message: String) {
-        logger.d(LOG_TAG, message)
+        try {
+            logger.d(LOG_TAG, Redactor.redact(message))
+        } catch (_: Exception) {
+            // Intentionally swallowed (OBS-02).
+        }
     }
 }
