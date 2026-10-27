@@ -134,3 +134,19 @@ Docs are DRAFT; PROPOSED decisions (`DEC-A3-n`, `DEC-A4-1`, `DEC-B2-n`, `DEC-B3-
 | F20 | `:runtime:scheduling` exposes `Dispatcher`/`Flow`/`KSerializer` types in its public API while declaring them via `implementation`; consumers must add them (compare F2). Also: the deprecated `DcSnackbarEffect(String?, ...)` overload is still public. | `runtime/scheduling/build.gradle.kts`; `ui/designsystem` snackbar | Next scheduling/DS pass |
 | F21 | Generated `architecture/features/<name>.md` is not registered in `context-map.yaml`/`module-map.md`; `platform/*/STRUCTURE.md` and `data/network/STRUCTURE.md` (refers to `architecture/10-data/network.md`) were not updated by DOC-B (outside allowed writes). | `reports/wp/C3.md` D2, `C1.md` D | Manual / next pass |
 
+
+## Opus final review outcome (2026-10-27)
+
+Full report: [`reports/final-review.md`](reports/final-review.md). Verdict: no blocking items found by reading; **nothing compiled or run** (Gradle blocked by network policy).
+
+Status of phases: R0 and R1 done; R4 documentation gate met (code uncompiled); R2, R3, R5, R6, R7 implemented but unverified (NOT_RUN).
+
+Decisions finalized by Opus (apply to `architecture/23-decision-log.md` / `22-known-deviations.md` in the next docs pass; they are still labelled PROPOSED in the log until then): accept DEC-A3-1..6, 8, THR-03 (static receiver scopes → new KD-07), DEC-B2-2, DEC-C1-2 (move `FakePermissionRequester` to `:testing`); amend DEC-A3-7 into the rule "a module exposing another module's types declares it `api`" (so `:data:network` gets `api(":foundation")`) and D-02 (exhaustive `when` for destination routes); D-01 move `Article*`/database to `:app` only after the first green build; D-03 no screenshot deps now (Compose Preview spike, Roborazzi fallback); D-04 accepted + exclude secure-prefs from backup; D-05 Option A; DB-02 Room tests in `androidTest` with `room-testing`; KD-02 stays Open until one real CI run; KD-06 move showcase to `app/src/debug` with a release stub.
+
+Should-fix queue (not yet applied):
+1. `ArticlesSyncWorker.kt:43-51` retries every error incl. HTTP 4xx → retry only when `error.isRetryable`, else `Failure(error)`.
+2. `DestinationRoutes` (`NavigationEffect.kt`) builds routes from `qualifiedName` and keeps a hand-maintained `all` list → exhaustive `when` over `Destination`, route from the serial name.
+3. CI first run depends on foojay downloading JDK 25/11 → install both with `setup-java`.
+4. Lower: data race on `windowOpen` in `throttleFirst`; `restore()` aborts when one alarm throws (F19); `:testing` may not see `CoroutineWorker` at compile time.
+
+First-run checklist when network access exists: see the end of `reports/final-review.md` (14 steps, starting with `./gradlew -p build-logic test`).
