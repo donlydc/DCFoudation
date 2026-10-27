@@ -1,5 +1,6 @@
 package com.dc.android.foundation.articles
 
+import androidx.annotation.StringRes
 import com.dc.android.foundation.platform.permission.PermissionState
 
 /** Everything [ArticlesScreen] needs to render. UDF state flows down. */
@@ -9,7 +10,7 @@ data class ArticlesUiState(
     /** `true` when the last refresh failed and the list shown is cached/stale data (DAT-CACHE-01). */
     val isShowingStaleData: Boolean = false,
     /** User-visible message retained until [ArticlesUiAction.UserMessageShown]. */
-    val userMessage: String? = null,
+    @StringRes val userMessage: Int? = null,
     /** `POST_NOTIFICATIONS` state for the sync worker's completion notification (PERM-01). */
     val notificationPermissionState: PermissionState = PermissionState.NotRequested
 )

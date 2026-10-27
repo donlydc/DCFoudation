@@ -4,17 +4,19 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dc.android.foundation.designsystem.components.DcSnackbarEffect
+import com.dc.android.foundation.designsystem.components.DcSnackbarHost
+import com.dc.android.foundation.designsystem.components.DcSnackbarHostState
+import com.dc.android.foundation.designsystem.components.DcSnackbarMessage
 import com.dc.android.foundation.designsystem.components.DcScaffold
 import com.dc.android.foundation.platform.permission.NotificationPermission
 import kotlinx.coroutines.flow.collect
@@ -34,8 +36,9 @@ fun ArticlesRoute(
     viewModel: ArticlesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarHostState = remember { DcSnackbarHostState() }
     val context = LocalContext.current
+    val userMessageText = uiState.userMessage?.let { stringResource(it) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -56,8 +59,8 @@ fun ArticlesRoute(
     }
 
     DcSnackbarEffect(
-        message = uiState.userMessage,
-        snackbarHostState = snackbarHostState,
+        message = userMessageText?.let { DcSnackbarMessage(it) },
+        state = snackbarHostState,
         onMessageShown = { viewModel.onAction(ArticlesUiAction.UserMessageShown) }
     )
 
@@ -72,7 +75,7 @@ fun ArticlesRoute(
 
     DcScaffold(
         modifier = modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { DcSnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         ArticlesScreen(
             state = uiState,

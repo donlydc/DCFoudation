@@ -40,7 +40,7 @@ class ArticlesSyncWorker @AssistedInject constructor(
 
     override suspend fun run(input: Unit?): DcJobResult {
         return try {
-            val succeeded = articlesRepository.refresh()
+            val succeeded = articlesRepository.refresh() == null
             // Status only — never log article title/body content (SEC-01).
             logger.d(LOG_TAG, "doWork: succeeded=$succeeded")
             if (succeeded) {

@@ -1,10 +1,11 @@
 package com.dc.android.foundation.articles
 
-import androidx.lifecycle.SavedStateHandle
+import com.dc.android.foundation.R
 import com.dc.android.foundation.core.AppError
 import com.dc.android.foundation.data.database.ArticleDao
 import com.dc.android.foundation.data.database.ArticleEntity
 import com.dc.android.foundation.data.network.NetworkResult
+import com.dc.android.foundation.platform.permission.NotificationPermission
 import com.dc.android.foundation.platform.permission.PermissionState
 import com.dc.android.foundation.testing.FakeDispatcherProvider
 import com.dc.android.foundation.testing.MainDispatcherRule
@@ -43,8 +44,7 @@ class ArticlesViewModelTest {
         ArticlesRepository(networkDataSource, dao, crashReporter),
         fakeDispatcherProvider,
         NoOpLogger,
-        analyticsTracker,
-        SavedStateHandle()
+        analyticsTracker
     )
 
     @Test
@@ -145,14 +145,84 @@ class ArticlesViewModelTest {
         viewModel.onAction(ArticlesUiAction.Refresh)
         advanceUntilIdle()
 
-        assertEquals(
-            "Refresh failed, showing cached data",
-            viewModel.uiState.value.userMessage
-        )
+        assertEquals(R.string.error_connectivity, viewModel.uiState.value.userMessage)
 
         viewModel.onAction(ArticlesUiAction.UserMessageShown)
 
         assertEquals(null, viewModel.uiState.value.userMessage)
+    }
+
+    @Test
+    fun `Refresh success exposes the refreshed message`() = runTest {
+        val viewModel = createViewModel()
+        viewModel.onAction(ArticlesUiAction.Refresh)
+        advanceUntilIdle()
+
+        assertEquals(R.string.articles_refreshed, viewModel.uiState.value.userMessage)
+    }
+
+    @Test
+    fun `Refresh failure maps the AppError variant to its message`() = runTest {
+        val viewModel = createViewModel(
+            networkDataSource = FakeArticlesNetworkDataSource(
+                result = NetworkResult.Failure(AppError.Http(code = 503))
+            )
+        )
+        viewModel.onAction(ArticlesUiAction.Refresh)
+        advanceUntilIdle()
+
+        assertEquals(R.string.error_http, viewModel.uiState.value.userMessage)
+    }
+
+    // Journey 1 (data flow): network -> Room -> UI; see reports/wp/C2.md.
+    @Test
+    fun `journey offline then online - stale cache is shown then replaced by fresh data`() = runTest {
+        val dao = FakeArticleDao(
+            initial = listOf(ArticleEntity(id = 1, authorId = 1, title = "Cached", body = "Body", fetchedAt = 0L))
+        )
+        val network = MutableFakeArticlesNetworkDataSource(
+            NetworkResult.Failure(AppError.Connectivity(java.io.IOException("offline")))
+        )
+        val viewModel = ArticlesViewModel(
+            ArticlesRepository(network, dao, RecordingCrashReporter()),
+            fakeDispatcherProvider,
+            NoOpLogger,
+            RecordingAnalyticsTracker()
+        )
+        advanceUntilIdle()
+
+        viewModel.onAction(ArticlesUiAction.Refresh)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isShowingStaleData)
+        assertEquals("Cached", viewModel.uiState.value.articles.single().title)
+
+        network.result = NetworkResult.Success(
+            listOf(ArticleDto(id = 2, userId = 5, title = "Fresh", body = "Body"))
+        )
+        viewModel.onAction(ArticlesUiAction.Refresh)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isShowingStaleData)
+        assertEquals(listOf("Cached", "Fresh"), viewModel.uiState.value.articles.map { it.title })
+    }
+
+    // Journey 2 (platform): notification permission request -> effect -> result -> state.
+    @Test
+    fun `journey notification permission - request emits effect and denial is reflected in state`() = runTest {
+        val viewModel = createViewModel()
+        val effects = mutableListOf<ArticlesUiEffect>()
+        val collector = launch { viewModel.effects.toList(effects) }
+
+        viewModel.onAction(ArticlesUiAction.RequestNotificationPermission)
+        advanceUntilIdle()
+        assertEquals(listOf<ArticlesUiEffect>(ArticlesUiEffect.LaunchNotificationPermissionRequest), effects)
+
+        viewModel.onAction(
+            ArticlesUiAction.UpdateNotificationPermissionState(NotificationPermission.fromRequestResult(false))
+        )
+        advanceUntilIdle()
+        assertEquals(PermissionState.Denied, viewModel.uiState.value.notificationPermissionState)
+        collector.cancel()
     }
 
     @Test
@@ -201,6 +271,12 @@ private class FakeArticleDao(
 
 private class FakeArticlesNetworkDataSource(
     private val result: NetworkResult<List<ArticleDto>> = NetworkResult.Success(emptyList())
+) : ArticlesNetworkDataSource {
+    override suspend fun fetchArticles(): NetworkResult<List<ArticleDto>> = result
+}
+
+private class MutableFakeArticlesNetworkDataSource(
+    var result: NetworkResult<List<ArticleDto>>
 ) : ArticlesNetworkDataSource {
     override suspend fun fetchArticles(): NetworkResult<List<ArticleDto>> = result
 }

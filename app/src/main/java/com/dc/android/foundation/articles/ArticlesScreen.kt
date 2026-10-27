@@ -8,7 +8,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.dc.android.foundation.R
 import com.dc.android.foundation.designsystem.components.DcButton
 import com.dc.android.foundation.designsystem.components.DcCard
 import com.dc.android.foundation.designsystem.components.DcContentState
@@ -37,12 +39,12 @@ fun ArticlesScreen(
     ) {
         if (state.notificationPermissionState != PermissionState.Granted) {
             DcButton(
-                text = "Enable notifications for sync updates",
+                text = stringResource(R.string.articles_enable_notifications),
                 onClick = { onAction(ArticlesUiAction.RequestNotificationPermission) }
             )
         }
         DcButton(
-            text = if (state.isRefreshing) "Refreshing..." else "Refresh",
+            text = stringResource(if (state.isRefreshing) R.string.articles_refreshing else R.string.articles_refresh),
             onClick = { onAction(ArticlesUiAction.Refresh) },
             enabled = !state.isRefreshing,
             loading = state.isRefreshing
@@ -51,14 +53,14 @@ fun ArticlesScreen(
             value = state.articles,
             isLoading = state.isRefreshing,
             errorMessage = if (state.isShowingStaleData) {
-                "Showing cached data — refresh failed"
+                stringResource(R.string.articles_stale_data)
             } else {
                 null
             },
             modifier = Modifier.weight(1f),
             isEmpty = { it.isEmpty() },
             onRetry = { onAction(ArticlesUiAction.Refresh) },
-            emptyTitle = "Nothing here yet"
+            emptyTitle = stringResource(R.string.articles_empty_title)
         ) { articles ->
             LazyColumn(verticalArrangement = Arrangement.spacedBy(spacing.component)) {
                 items(articles, key = { it.id }) { article ->

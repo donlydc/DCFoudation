@@ -26,4 +26,17 @@
     <string name="config_language_vietnamese">Tiếng Việt</string>
     <string name="config_language_description">Đổi ngôn ngữ sẽ tạo lại màn hình hiện tại và nạp lại tài nguyên đã dịch.</string>
     <string name="config_reset">Đặt lại giao diện</string>
+
+    <string name="articles_refresh">Làm mới</string>
+    <string name="articles_refreshing">Đang làm mới…</string>
+    <string name="articles_refreshed">Đã làm mới</string>
+    <string name="articles_enable_notifications">Bật thông báo cho cập nhật đồng bộ</string>
+    <string name="articles_stale_data">Đang hiển thị dữ liệu đã lưu — làm mới thất bại</string>
+    <string name="articles_empty_title">Chưa có nội dung</string>
+
+    <string name="error_connectivity">Không có kết nối. Đang hiển thị dữ liệu đã lưu.</string>
+    <string name="error_http">Máy chủ không thể hoàn tất yêu cầu. Vui lòng thử lại sau.</string>
+    <string name="error_serialization">Dữ liệu nhận được có định dạng không mong đợi.</string>
+    <string name="error_storage">Không thể đọc hoặc lưu dữ liệu trên thiết bị này.</string>
+    <string name="error_unknown">Đã xảy ra lỗi. Vui lòng thử lại.</string>
 </resources>

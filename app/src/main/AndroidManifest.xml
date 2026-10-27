@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Articles refresh (ArticlesApiService via :data:network) performs HTTPS network I/O. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- PERM-01: the sync worker's completion notification (Android 13+/API 33+ requirement). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 

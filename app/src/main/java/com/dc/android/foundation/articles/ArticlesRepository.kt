@@ -1,5 +1,6 @@
 package com.dc.android.foundation.articles
 
+import com.dc.android.foundation.core.AppError
 import com.dc.android.foundation.data.database.ArticleDao
 import com.dc.android.foundation.data.database.ArticleEntity
 import com.dc.android.foundation.data.network.NetworkResult
@@ -25,7 +26,7 @@ data class Article(
  *   emitting as the table changes — callers never wait on the network to see something.
  * - [refresh] triggers a network fetch. On success the response is upserted into Room, which
  *   [observeArticles] then re-emits through automatically — no separate "apply the response"
- *   step. On failure, cached rows are left untouched and `refresh` returns `false` so the
+ *   step. On failure, cached rows are left untouched and `refresh` returns the [AppError] so the
  *   ViewModel can surface a "showing cached data, refresh failed" signal instead of an error
  *   state or an empty screen.
  */
@@ -37,19 +38,19 @@ class ArticlesRepository @Inject constructor(
     fun observeArticles(): Flow<List<Article>> =
         articleDao.observeArticles().map { entities -> entities.map { it.toArticle() } }
 
-    /** Returns `true` on a successful refresh, `false` if the network call failed (stale cache kept). */
-    suspend fun refresh(): Boolean =
+    /** Returns `null` on a successful refresh, or the [AppError] if the network call failed (stale cache kept). */
+    suspend fun refresh(): AppError? =
         when (val result = networkDataSource.fetchArticles()) {
             is NetworkResult.Success -> {
                 articleDao.upsertAll(result.data.map { it.toEntity() })
-                true
+                null
             }
             is NetworkResult.Failure -> {
                 // Already-existing ERR-01 error boundary (NetworkResult.Failure) — recording the
                 // exception here is an observability side-effect only, it does not change the
-                // boundary's contract (refresh() still just returns false).
+                // boundary's contract (refresh() still just returns the error).
                 result.error.cause?.let(crashReporter::recordException)
-                false
+                result.error
             }
         }
 }

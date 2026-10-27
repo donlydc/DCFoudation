@@ -26,4 +26,17 @@
     <string name="config_language_vietnamese">Vietnamese</string>
     <string name="config_language_description">Changing the language recreates the current activity and reloads localized resources.</string>
     <string name="config_reset">Reset appearance</string>
+
+    <string name="articles_refresh">Refresh</string>
+    <string name="articles_refreshing">Refreshing…</string>
+    <string name="articles_refreshed">Refreshed</string>
+    <string name="articles_enable_notifications">Enable notifications for sync updates</string>
+    <string name="articles_stale_data">Showing cached data — refresh failed</string>
+    <string name="articles_empty_title">Nothing here yet</string>
+
+    <string name="error_connectivity">No connection. Showing cached data.</string>
+    <string name="error_http">The server could not complete the request. Try again later.</string>
+    <string name="error_serialization">Received data in an unexpected format.</string>
+    <string name="error_storage">Could not read or save data on this device.</string>
+    <string name="error_unknown">Something went wrong. Please try again.</string>
 </resources>

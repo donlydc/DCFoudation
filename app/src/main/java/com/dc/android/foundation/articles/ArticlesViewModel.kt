@@ -1,8 +1,9 @@
 package com.dc.android.foundation.articles
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dc.android.foundation.R
+import com.dc.android.foundation.errors.toMessageRes
 import com.dc.android.foundation.observability.AnalyticsTracker
 import com.dc.android.foundation.observability.Logger
 import com.dc.android.foundation.runtime.concurrency.DispatcherProvider
@@ -32,8 +33,7 @@ class ArticlesViewModel @Inject constructor(
     private val articlesRepository: ArticlesRepository,
     private val dispatcherProvider: DispatcherProvider,
     private val logger: Logger,
-    private val analyticsTracker: AnalyticsTracker,
-    private val savedStateHandle: SavedStateHandle
+    private val analyticsTracker: AnalyticsTracker
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArticlesUiState())
@@ -70,9 +70,10 @@ class ArticlesViewModel @Inject constructor(
     private fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
-            val succeeded = withContext(dispatcherProvider.io) {
+            val error = withContext(dispatcherProvider.io) {
                 articlesRepository.refresh()
             }
+            val succeeded = error == null
             // Count/status only — never log article title/body content (SEC-01).
             logger.d(LOG_TAG, "refresh: succeeded=$succeeded")
             if (succeeded) {
@@ -82,11 +83,7 @@ class ArticlesViewModel @Inject constructor(
                 it.copy(
                     isRefreshing = false,
                     isShowingStaleData = !succeeded,
-                    userMessage = if (succeeded) {
-                        "Refreshed"
-                    } else {
-                        "Refresh failed, showing cached data"
-                    }
+                    userMessage = error?.toMessageRes() ?: R.string.articles_refreshed
                 )
             }
         }
