@@ -35,6 +35,7 @@
 | `architecture-writer` | Architect (thường) + Documentation | Sonnet 5.5 | docs, `plan/`, `reports/` | Template, module/feature docs, context-map, HANDOVER, design delta |
 | `implementation-worker` | Implementation | Sonnet 5.5 | đường dẫn của WP | Code + test + module doc delta |
 | `consistency-checker` | Verification + gate review | Haiku 5.5 | `reports/` | Chạy Gradle/docs-check/boundary-check, PASS/FAIL/NOT_RUN |
+| `wp-reviewer` | Reviewer (mỗi WP) | Sonnet 5.5 | `reports/` | Review diff + báo cáo của **mọi** WP: APPROVE / CHANGES_REQUESTED |
 | `critical-architecture-auditor` | Architect (leo thang) | Opus 5.5 | không | Quyết định cấp cao, chỉ theo §2.1 |
 | *(phiên chính)* | Orchestrator | — | tất cả | Điều phối WP, việc nhỏ, commit/push, hỏi người dùng |
 
@@ -65,7 +66,10 @@ Wave 6  R8, R9  chỉ khi người dùng xác nhận consumer thật
 ## 4. Work packages
 
 "Đọc" là danh sách tối đa; ngoài ra agent chỉ mở thêm tệp khi CodeGraph chỉ ra phụ thuộc.
-Gate mặc định: `consistency-checker` (Haiku) + phiên chính đối chiếu; không có review Opus định kỳ.
+**Mọi WP kết thúc bằng `wp-reviewer` (Sonnet)** → `reports/wp/<WP-ID>.review.md`. CHANGES_REQUESTED → agent
+thực hiện WP sửa đúng các mục blocking (tối đa 2 vòng; vòng thứ 3 chuyển phiên chính quyết định).
+Gate phase: `consistency-checker` (Haiku) + phiên chính đối chiếu; không có review Opus định kỳ.
+WP liên quan (cùng phase, cùng agent, cùng loại tệp) có thể gộp một lần review để giảm token.
 
 ### R0 — Baseline & risk closure (P0)
 
@@ -189,6 +193,7 @@ WP R3.2 — plan/AGENT_EXECUTION_PLAN.md §4.
 - Implementer cần chạm tệp ngoài phạm vi WP → dừng, báo phiên chính.
 - Cùng lỗi thất bại 2 lần → không retry; nếu là lỗi hướng kiến trúc thì đủ điều kiện (5) để gọi Opus.
 - WP đổi public API, dependency, DI, lifecycle → cập nhật module doc trong cùng WP (MP §10.4).
+- WP chỉ được commit khi review APPROVE (hoặc phiên chính ghi rõ lý do chấp nhận rủi ro).
 - Sau mỗi wave: `codegraph sync`; `graphify update .` nếu topology đổi; commit theo WP.
 
 ## 8. Thứ tự khởi động (MP §13.2)
