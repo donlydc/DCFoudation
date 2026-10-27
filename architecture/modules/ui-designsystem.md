@@ -1,0 +1,103 @@
+# MODULE: :ui:designsystem — DC design system
+Status: DRAFT
+Verified commit: UNKNOWN
+Last source audit: NOT_RUN
+Test status: NOT_RUN (evidence: reports/baseline-verification.md)
+
+> **Two separate vocabularies**
+> - **Doc status** (`Status:`): `DRAFT` = written/unreviewed; `VERIFIED` = checked against current source and build files (needs commit SHA + audit date); `NEEDS_REFRESH` = source moved on or docs disagree.
+> - **Test status** (`Test status:`): `NOT_RUN` | `TESTED` | `FAILED` | `BLOCKED`; `TESTED`/`FAILED` require an evidence path under `reports/`. Never derived from reading code.
+> - Fact tags used below: `CONFIRMED_IN_CODE`, `DOCUMENTED_ONLY`, `PROPOSED`, `UNKNOWN`.
+
+## 1. Identity and responsibility
+- Owns: primitive tokens, semantic `DcTheme` + `DcUiScale`, reusable stateless/state-hoisted `Dc*` Compose components, preview annotations, the manual `DesignSystemCatalog`, default `dc_*` string resources (DEC-08). `CONFIRMED_IN_CODE` (`ui/designsystem/build.gradle.kts`, `ui/designsystem/STRUCTURE.md`)
+- Does not own: feature/domain screens or models (DEC-06), app configuration persistence and locale (`:app` config, DEC-07), navigation engine (`:platform:navigation`; `DcNavigationSuite` is only a UI shell), image-loader choice beyond the Coil wrapper.
+- Public package/API: `com.dc.android.foundation.designsystem.{tokens,theme,components,catalog,preview}` (namespace `com.dc.android.foundation.designsystem`). Entry symbols: `DcTheme`, `DcContentState`, `DesignSystemCatalog`, `DcSpacing`, `DcColors`.
+- Consumer(s): `:app` only (`implementation(project(":ui:designsystem"))`): `MainActivity`, `greeting/*`, `articles/*`, `config/*`, `showcase/trip/*`.
+
+## 2. Context and discovery
+- Read first: `architecture/00-index.md`, `architecture/07-design-system/README.md` (DS-01..04), then the one sub-doc for the concern (`tokens.md`, `semantic-theme.md`, `components.md`, `previews-and-catalog.md`, `component-roadmap.md`). DECs: DEC-05..08 in `architecture/23-decision-log.md`.
+- Main code (`ui/designsystem/src/main/java/.../designsystem/`):
+  - `tokens/` (7 files): `ColorTokens`, `SpacingTokens`, `DcSpacing` (+ `LocalDcSpacing`), `ShapeTokens`, `MotionTokens`, `SurfaceTokens`, `AccessibilityTokens` (`MinTouchTarget`).
+  - `theme/` (5 files): `DcTheme` (+ `DcThemeDefaults`), `DcColors` (extended success/warning/info/offline roles, `LocalDcColors`), `DcTypography`, `DcShapes`, `DcUiScale`.
+  - `components/` (26 files, grouped below), `catalog/` (`DesignSystemCatalog.kt`, `ExtendedCatalog.kt`), `preview/DcPreviews.kt`, `res/values/strings.xml`.
+- Tests: `src/test` (5 files), `src/androidTest` (2 files); see section 8.
+- Build config: `ui/designsystem/build.gradle.kts` — plugins `dc.android.library`, `dc.compose`, `dc.testing`; external deps: Material icons core, Material3 adaptive navigation-suite, Coil compose + okhttp, Compose UI test (androidTest).
+- CodeGraph entry symbols: `DcTheme`, `DcUiScale` (callers: `AppConfiguration*`, `MainActivity`), `DcContentState` (caller: `articles/ArticlesScreen.kt`), `DesignSystemCatalog` (caller: `MainActivity` debug route), `DcNavigationSuite` (caller: `MainActivity`).
+
+## 3. Dependencies and boundaries
+- Allowed: no `project(...)` dependencies today (`architecture/dependency-rules.md`: `:ui:designsystem -> (none)`); third-party Compose/Material3/Coil only. Direction: tokens -> theme -> components -> feature UI (INV-08, DS-01).
+- Forbidden: any edge to `:app`/feature packages (DEP-01); to `:data:*`, `:security` (DEP-03/INV-02); PROPOSED extension: also `:runtime:*`, `:platform:*`. Business/domain types in public APIs (DEC-06). Feature code importing Coil or Material adaptive types (STRUCTURE.md; Coil confined to `components/DcAsyncImage.kt`, `CONFIRMED_IN_CODE`).
+- Exceptions (DEC/KD): none recorded. Edge enforcement is not automated (KD-02, R2.1).
+
+## 4. Data/control flow
+```mermaid
+flowchart LR
+  Tok[tokens/*] --> Th[DcTheme + DcUiScale]
+  Th -->|LocalDcSpacing, LocalDcColors, MaterialTheme| Comp[components/Dc*]
+  Comp --> Feat[":app feature UI"]
+  Cfg[":app AppConfiguration"] -->|darkTheme, dynamicColor, uiScale| Th
+  Comp --> Cat[DesignSystemCatalog / ExtendedCatalog]
+```
+`DcTheme(darkTheme, dynamicColor=false, colorScheme, typography, shapes, extendedColors, spacing, uiScale, content)` provides `LocalDcSpacing = uiScale.applyTo(spacing)` and `LocalDcColors`, then wraps `MaterialTheme` with `uiScale.applyTo(typography)` (`theme/DcTheme.kt:98-121`). Dynamic color is opt-in and gated on API >= S (`DcThemeDefaults.colorScheme`).
+
+## 5. Contracts
+- Layers: components read semantics from `MaterialTheme.*`, `LocalDcSpacing`, `LocalDcColors`; feature code must not import `tokens.ColorTokens`/`DcTypography` (DS-01) or use raw `.dp`/`RoundedCornerShape` literals (DS-03).
+- `DcUiScale` (DEC-07): enum `Compact` 0.90 / `Standard` 1.00 / `Comfortable` 1.10. `applyTo(DcSpacing)` scales xSmall..xxLarge and `component`; `applyTo(Typography)` scales fontSize and lineHeight of all 15 styles. The 48dp touch floor (`AccessibilityTokens.MinTouchTarget`, DS-02) and system font scale are not changed. Apply once at the app-level `DcTheme`, never per screen. `applyTo` is `internal`.
+- Component groups by file (names only; the full registry is the future `ui/designsystem/COMPONENTS.md`, UI-01 / R4, not yet created):
+
+| File(s) | Group (sample symbols) |
+|---|---|
+| `DcText`, `DcTextLink`, `DcButton`, `DcActionComponents` | text; `DcButton` + `DcButtonVariant`; icon buttons, FABs |
+| `DcInputComponents`, `DcSearchBar`, `DcFormComponents`, `DcDropdownField` | `DcTextField`, `DcPasswordTextField`, search, `DcTextArea`, stepper/slider/OTP/date field |
+| `DcSelectionComponents`, `DcToggleRow`, `DcModels` | segmented, radio/checkbox/chip groups, `DcToggleRow`; `DcOption<T>`, `DcMenuItem` |
+| `DcListComponents`, `DcListRow`, `DcMenuComponents` | `DcCard`, `DcKeyValueRow`, `DcStatusChip`, `DcListRow`; menus, tooltip |
+| `DcFeedbackComponents`, `DcStateComponents`, `DcMessageComponents`, `DcBadgeComponents` | `DcContentState<T>`; loading/empty/error/offline states; `DcInlineMessage`, progress, `DcSnackbarHost`; badges |
+| `DcOverlayComponents`, `DcSheetComponents` | dialogs, `DcModalBottomSheet`, skeletons; action/selection sheets |
+| `DcScreenComponents`, `DcLayoutComponents`, `DcPullToRefreshBox` | `DcScaffold`, `DcTopAppBar`; content container, adaptive grid, tabs, expandable section; pull-to-refresh |
+| `DcNavigationSuite`, `DcNavigationDrawer`, `DcAsyncImage` | adaptive nav shell (`DcNavigationItem`); drawer; Coil-backed image/avatar |
+
+- `DcContentState<T>` is a presentation helper (Loading/Empty/Error/Content branch via `resolveDcContentStateBranch`), not a cache policy. Dialog/sheet visibility is caller-owned (DEC-05). Errors arrive as caller-mapped messages, not exceptions. No suspend or blocking work in the module; all composables run on the main thread.
+- Catalog/preview: `DesignSystemCatalog()` (scrollable, light/dark) + `ExtendedCatalogSections()`; `DcThemePreviews`, `DcFontScalePreviews`, `DcWindowPreviews`. Manual catalog, no screenshot tooling (DEC-08: undecided). DS-04 coverage of every public composable is `DOCUMENTED_ONLY`, not machine-checked.
+
+## 6. DI, configuration and ownership
+- No Hilt, no `@Module`, no singletons in this module (DS is pure Compose). Consumers construct nothing; they call composables.
+- Configuration enters only as `DcTheme` parameters. `:app` `MainActivity.DcAppRoot` maps `AppConfiguration` (theme mode, dynamic color, `DcUiScale`) to them; persistence belongs to `app/config` (see `app.md`).
+- Strings (DEC-08): `src/main/res/values/strings.xml` holds 23 `dc_*` defaults (e.g. `dc_retry`, `dc_cancel`, `dc_loading`); components take overridable label parameters. Only an English default exists (no `values-vi`), `CONFIRMED_IN_CODE`.
+
+## 7. Edge cases, security and performance
+- No secrets/PII handled; `DcPasswordTextField` masks input only (no storage).
+- Accessibility floor enforced inside components (DS-02); large-font and UI-scale stress verified only by previews/unit tests of scale math, not by device runs (`NOT_RUN`).
+- Recomposition cost of `DcUiScale.applyTo(Typography)` (copies 15 styles per theme call) is not measured. `UNKNOWN`: no benchmark exists (UI-09).
+- `DcNavigationSuite` enforces supported item count (`requireSupportedNavigationItemCount`, unit-tested).
+
+## 8. Tests and evidence
+- Unit (`src/test`, 27 `@Test`, never executed): `DcContentStatePolicyTest`, `DcNavigationSuiteTest`, `DcWidgetPolicyTest` (components); `DcThemeTokensTest`, `DcUiScaleTest` (theme).
+- Integration: none.
+- Instrumented (`src/androidTest`, 19 `@Test`, compiled-only/never executed; no device): `DcComponentsTest`, `DcWidgetsTest`.
+- Commands: `./gradlew :ui:designsystem:testDebugUnitTest`, `./gradlew :ui:designsystem:compileDebugKotlin` (previews/catalog compile), `./gradlew :ui:designsystem:connectedDebugAndroidTest` (needs emulator).
+- Test status: NOT_RUN (evidence: reports/baseline-verification.md; Gradle blocked at toolchain 25 and AGP plugin resolution, Part B)
+- Last verified result: none. No screenshot/golden tests exist.
+
+## 9. Known debt / decisions
+- DEC-05 (delta over existing DS, `Dc` prefix kept), DEC-06 (promote primitives, not domain screens), DEC-07 (UI scale at root theme), DEC-08 (widget set + module string defaults).
+- Legacy Material-typed API kept for source compatibility alongside DEC-08 typed models: `DcSnackbarEffect(message: String?, SnackbarHostState, ...)` in `DcFeedbackComponents.kt` vs `DcSnackbarEffect(DcSnackbarMessage?, DcSnackbarHostState, ...)` in `DcMessageComponents.kt`; two `DcDropdownField` overloads in `DcDropdownField.kt` and `DcSelectionComponents.kt`. `CONFIRMED_IN_CODE`.
+- Backlog (PROPOSED, from master-plan 4.12; none started): UI-01 component registry `COMPONENTS.md`; UI-02 semantic token contract + `DcUiScale` accessibility snapshots; UI-03 normalize buttons/inputs/forms/selection/lists/menus; UI-04 feedback/overlay ownership tests; UI-05 `DcContentState` state permutations incl. offline/refreshing; UI-06 adaptive/insets demo; UI-07 expandable card, date range, timeline, data table (only if consumer proves need); UI-08 diagnostics widgets as optional extension; UI-09 screenshot/semantics/recomposition tests; UI-10 per-component usage docs.
+- No KD currently scoped to this module.
+
+## 10. Safe extension guide
+- Add a component: put it in the matching `components/Dc*Components.kt` group (or a new focused file), take `modifier`, state-hoisted `value`/`onChange`, `enabled`, semantic variant enum; use `LocalDcSpacing`/`MaterialTheme`; default labels via `dc_*` string resources; add a catalog section and a preview (DS-04); add a policy test for non-trivial logic. Update `07-design-system/components.md` (and COMPONENTS.md once UI-01 exists).
+- Add a token: `tokens/` first, then expose through `DcTheme` defaults; do not let feature code read the token file.
+- Do not add `project(...)` deps, domain models, Retrofit/Room/DataStore, or expose Coil/Material adaptive types.
+- Sample consumers: `articles/ArticlesScreen.kt` (`DcContentState`, `DcCard`, `DcButton`), `MainActivity.kt` (`DcTheme`, `DcNavigationSuite`), `showcase/trip/*` (DEC-06 composition).
+
+## 11. AI task playbook
+- Read → Graph → Propose → Edit → Test → Update docs → Handover.
+- Read: `07-design-system/README.md` and the concern sub-doc; `ui/designsystem/STRUCTURE.md`; DEC-05..08.
+- Graph: `codegraph_explore "DcTheme DcUiScale DcContentState DesignSystemCatalog <component>"` with `projectPath` = repo root; check consumers in `:app` before changing a public signature (additive changes only).
+- Recipe: smallest additive change; keep old overloads (DEC-08); then catalog + preview + test.
+- Done when: `:ui:designsystem:compileDebugKotlin` and unit tests pass (currently cannot run: Gradle blocked, see section 8), `07-design-system` docs updated, no new project edge, report to `reports/wp/<WP>.md`.
+
+## 12. Change log and links
+- 2026-10-27 — R1.1d — first DRAFT from source; report `reports/wp/R1.1d.md`.
+- Links: `architecture/context-map.yaml` (`ui-designsystem`), `architecture/dependency-rules.md`, `architecture/07-design-system/`, `architecture/modules/app.md`, future `ui/designsystem/COMPONENTS.md` (PROPOSED, UI-01).
