@@ -1,6 +1,5 @@
 plugins {
     id("dc.android.library")
-    id("dc.compose")
     id("dc.testing")
 }
 
@@ -10,5 +9,4 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.activity.compose)
 }
