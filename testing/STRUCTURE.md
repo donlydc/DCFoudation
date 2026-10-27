@@ -11,3 +11,5 @@
 - Production modules may consume this module only from test configurations.
 - Read `architecture/17-testing.md` before adding shared test abstractions.
 - Verify with `:testing:testDebugUnitTest` and at least one consuming module test.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

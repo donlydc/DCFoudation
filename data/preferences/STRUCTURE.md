@@ -11,3 +11,5 @@
 - Do not add Room, network, UI, or feature dependencies.
 - Read `architecture/10-data/preferences-datastore.md` and `mapping-boundaries.md` before API changes.
 - Verify with `:data:preferences:testDebugUnitTest`.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

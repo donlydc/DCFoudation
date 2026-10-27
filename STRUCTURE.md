@@ -3,6 +3,7 @@
 Mô tả vai trò kiến trúc của **từng thư mục** trong repo. Nội dung được đối chiếu với `settings.gradle.kts`, các `build.gradle.kts` và mã nguồn hiện tại (không chép từ kế hoạch).
 
 > Thẩm quyền: khi mâu thuẫn, `architecture/` > file này. File này là **bản đồ điều hướng**, không đặt luật mới. Luật phụ thuộc: [`architecture/02-layers-and-dependencies.md`](architecture/02-layers-and-dependencies.md). Danh sách module chuẩn: [`architecture/03-project-structure.md`](architecture/03-project-structure.md).
+> Hướng dẫn triển khai từng module: [`MODULE_GUIDES.md`](MODULE_GUIDES.md) (mỗi module một `IMPLEMENTATION.md`).
 > Mỗi module có thêm một thẻ ngắn `STRUCTURE.md` (vai trò, sở hữu gì, hướng dẫn cho AI) — file này là phần tổng hợp phía trên chúng.
 
 - Namespace gốc: `com.dc.android.foundation` · Root project: `DC Android Foundation`
@@ -39,7 +40,7 @@ DCFoudation/
 ├── .github/workflows/       CI
 ├── .claude/                 cấu hình Claude Code (hook graphify)
 └── (file gốc)               build.gradle.kts, settings.gradle.kts, gradle.properties,
-                             CLAUDE.md, AGENTS.md, README.md, HANDOVER.md, PLAN_REPORT.md,
+                             CLAUDE.md, AGENTS.md, README.md, MODULE_GUIDES.md, HANDOVER.md, PLAN_REPORT.md,
                              BASE_PROJECT_ROADMAP.md, SKILLS.md, STRUCTURE.md
 ```
 

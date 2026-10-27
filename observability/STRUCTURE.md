@@ -11,3 +11,5 @@
 - Event names/properties must be stable and business-appropriate; do not log raw payloads.
 - Read `architecture/15-observability/` and `12-security-and-session.md` before API changes.
 - Verify module compilation and affected feature tests.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

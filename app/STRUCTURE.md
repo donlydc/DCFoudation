@@ -12,3 +12,5 @@
 - Features must not import another feature's private implementation.
 - Read `architecture/04-app-bootstrap-and-lifecycle.md`, `05-presentation-udf.md`, and `20-feature-template.md` before structural changes.
 - Verify with focused `:app` tests, then `:app:assembleDebug`.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

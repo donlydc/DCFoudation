@@ -16,3 +16,5 @@ occurrence calculations, and the `DcScheduler` facade.
 - This module has no Hilt dependency. Its Android framework receivers use the module-owned
   coroutine scope only to finish short framework callbacks; business work must hand off to a job.
 - Verify with `:runtime:scheduling:testDebugUnitTest` and app assembly after integration changes.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

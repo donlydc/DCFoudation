@@ -12,3 +12,5 @@
 - Generated feature scaffolding must stay inside the target module and respect `architecture/20-feature-template.md`.
 - Read `architecture/18-build-logic-and-dependencies.md` before changing a convention.
 - Verify with `./gradlew -p build-logic test` and a full `assembleDebug`.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

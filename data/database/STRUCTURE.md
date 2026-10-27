@@ -11,3 +11,5 @@
 - Keep network DTO mapping outside this module.
 - Read `architecture/10-data/persistence-room.md`, `cache-and-offline.md`, and `mapping-boundaries.md` before schema changes.
 - Verify Room compilation and `:data:database:testDebugUnitTest`.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

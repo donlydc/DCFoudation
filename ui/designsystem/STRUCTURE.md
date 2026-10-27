@@ -14,3 +14,5 @@
 - Adaptive navigation is exposed only through `DcNavigationSuite`; do not leak Material adaptive types.
 - Read the relevant file under `architecture/07-design-system/` before changing public UI APIs.
 - Verify previews/compilation and `:ui:designsystem:assembleDebug`.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

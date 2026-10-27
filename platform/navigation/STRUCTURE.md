@@ -11,3 +11,5 @@
 - Feature packages may depend on destination contracts, never engine objects.
 - Read `architecture/06-navigation.md` before changing route contracts.
 - Verify module compilation and `:app:assembleDebug`.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

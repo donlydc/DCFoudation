@@ -11,3 +11,5 @@
 - Add permission capability only when the manifest declares a real permission use case.
 - Read `architecture/13-permissions.md` before changing the contract.
 - Verify module compilation and the consuming feature tests.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

@@ -11,3 +11,5 @@
 - Logging must satisfy SEC-01: no secrets, tokens, response bodies, or PII.
 - Read `architecture/10-data/network.md` and `11-error-and-result-model.md` before boundary changes.
 - Verify with `:data:network:testDebugUnitTest`.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

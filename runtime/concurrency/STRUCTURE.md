@@ -24,3 +24,5 @@
 - Test utilities (fakes) belong in `:testing`; only real production types live here.
 - Read `architecture/09-concurrency-and-threading.md` before changing dispatcher contracts.
 - Verify with `:runtime:concurrency:test`.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).

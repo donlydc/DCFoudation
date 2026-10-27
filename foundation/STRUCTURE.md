@@ -10,3 +10,5 @@
 - Add a primitive only when at least two capability modules need the same policy.
 - Presentation maps `AppError` to user text; this module never owns resource IDs or messages.
 - Verify with `:foundation:test` and focused dependent-module tests.
+
+Implementation guide: [`IMPLEMENTATION.md`](IMPLEMENTATION.md).
