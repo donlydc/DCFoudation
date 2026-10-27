@@ -21,7 +21,7 @@
 ## Agents và kế hoạch triển khai
 
 - Kế hoạch R0–R9 chia theo agent: `plan/AGENT_EXECUTION_PLAN.md` (nguồn yêu cầu: `plan/FOUNDATION_MASTER_PLAN.md`, chỉ trích mục cần bằng `sed`).
-- Agent: `.claude/agents/` — `architecture-reader`, `consistency-checker` (Haiku); `architecture-writer`, `implementation-worker` (Sonnet); `critical-architecture-auditor` (Opus, chỉ leo thang).
+- Agent: `.claude/agents/` — `architecture-reader`, `architecture-writer`, `implementation-worker`, `consistency-checker`, `wp-reviewer` (đều Sonnet 5.5 — ưu tiên mặc định); `critical-architecture-auditor` (Opus, chỉ leo thang). Mọi WP được `wp-reviewer` (Sonnet) review.
 - Bàn giao giữa agent qua `reports/wp/<WP-ID>.md`, không qua log thô.
 
 ## AgentMemory

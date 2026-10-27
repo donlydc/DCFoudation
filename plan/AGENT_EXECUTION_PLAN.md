@@ -20,8 +20,9 @@
    `context-map.yaml` thay vì khám phá lại mã nguồn.
 4. **Bàn giao bằng tệp nhỏ, không bằng hội thoại**: mỗi WP ghi `reports/wp/<WP-ID>.md` (mẫu §6, ≤ 120 dòng);
    agent kế tiếp chỉ đọc tệp đó. Context packet của `architecture-reader` ≤ 1.200 token.
-5. **Định tuyến model**: Haiku cho kiểm kê/chạy lệnh/kiểm tra; Sonnet cho code và tài liệu;
-   **Opus chỉ khi gặp điều kiện leo thang** (§2.1) — không dùng Opus để review định kỳ.
+5. **Định tuyến model** (theo yêu cầu người dùng, ưu tiên **Sonnet 5.5**): mọi agent mặc định Sonnet 5.5;
+   **Opus chỉ khi gặp điều kiện leo thang** (§2.1). Haiku không dùng mặc định. Tiết kiệm token đến từ
+   phạm vi đọc hẹp, CodeGraph và bàn giao bằng tệp, không từ hạ model.
 6. **Log build không vào context nguyên văn**: lưu `reports/logs/` (git-ignore), chỉ chuyển lệnh, exit code,
    số test, lỗi gốc đầu tiên.
 7. **Không spawn agent cho việc nhỏ** (≤ 3 tệp, một module): phiên chính tự làm.
@@ -31,10 +32,10 @@
 
 | Agent | Vai trò MP §10.1 | Model | Quyền ghi | Dùng cho |
 |---|---|---|---|---|
-| `architecture-reader` | Discovery | Haiku 5.5 | chỉ `reports/` | Kiểm kê, context packet, mock task kiểm tra tài liệu |
+| `architecture-reader` | Discovery | Sonnet 5.5 | chỉ `reports/` | Kiểm kê, context packet, mock task kiểm tra tài liệu |
 | `architecture-writer` | Architect (thường) + Documentation | Sonnet 5.5 | docs, `plan/`, `reports/` | Template, module/feature docs, context-map, HANDOVER, design delta |
 | `implementation-worker` | Implementation | Sonnet 5.5 | đường dẫn của WP | Code + test + module doc delta |
-| `consistency-checker` | Verification + gate review | Haiku 5.5 | `reports/` | Chạy Gradle/docs-check/boundary-check, PASS/FAIL/NOT_RUN |
+| `consistency-checker` | Verification + gate review | Sonnet 5.5 | `reports/` | Chạy Gradle/docs-check/boundary-check, PASS/FAIL/NOT_RUN |
 | `wp-reviewer` | Reviewer (mỗi WP) | Sonnet 5.5 | `reports/` | Review diff + báo cáo của **mọi** WP: APPROVE / CHANGES_REQUESTED |
 | `critical-architecture-auditor` | Architect (leo thang) | Opus 5.5 | không | Quyết định cấp cao, chỉ theo §2.1 |
 | *(phiên chính)* | Orchestrator | — | tất cả | Điều phối WP, việc nhỏ, commit/push, hỏi người dùng |
@@ -68,7 +69,7 @@ Wave 6  R8, R9  chỉ khi người dùng xác nhận consumer thật
 "Đọc" là danh sách tối đa; ngoài ra agent chỉ mở thêm tệp khi CodeGraph chỉ ra phụ thuộc.
 **Mọi WP kết thúc bằng `wp-reviewer` (Sonnet)** → `reports/wp/<WP-ID>.review.md`. CHANGES_REQUESTED → agent
 thực hiện WP sửa đúng các mục blocking (tối đa 2 vòng; vòng thứ 3 chuyển phiên chính quyết định).
-Gate phase: `consistency-checker` (Haiku) + phiên chính đối chiếu; không có review Opus định kỳ.
+Gate phase: `consistency-checker` (Sonnet) + phiên chính đối chiếu; không có review Opus định kỳ.
 WP liên quan (cùng phase, cùng agent, cùng loại tệp) có thể gộp một lần review để giảm token.
 
 ### R0 — Baseline & risk closure (P0)
@@ -94,8 +95,7 @@ WP liên quan (cùng phase, cùng agent, cùng loại tệp) có thể gộp m�
 | R1.4 | architecture-reader | **chỉ** `context-protocol.md` + docs R1 | Giải 2 mock task (PERM-01, NET-05) chỉ bằng tài liệu; ghi chỗ thiếu | `reports/wp/R1.4.md` |
 | R1.5 | architecture-writer | R1.4 | Vá chỗ thiếu; liên kết từ `00-index.md`, `CLAUDE.md`, `SKILLS.md` | docs delta |
 
-**Gate R1**: `check_architecture.py` xanh + R1.4 tìm đúng file/test. Mock task chạy bằng **Haiku** là phép thử:
-nếu model rẻ nhất định vị đúng chỉ từ tài liệu thì tài liệu đạt, và mọi WP sau tiêu ít token hơn.
+**Gate R1**: `check_architecture.py` xanh + R1.4 tìm đúng file/test. Mock task là phép thử: agent chỉ được đọc tài liệu; nếu định vị đúng tệp/test thì tài liệu đạt, và mọi WP sau tiêu ít token hơn.
 
 ### R2 — Quality & safety net (P0)
 

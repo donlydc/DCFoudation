@@ -1,7 +1,7 @@
 ---
 name: architecture-reader
 description: Cheap read-only repository discovery, inventory and task-to-architecture routing. Use before implementation to identify only the relevant files, rules, symbols and tests. Also used for R1 mock-task validation of architecture docs.
-model: claude-haiku-5-5
+model: claude-sonnet-5-5
 effort: low
 tools: Read, Grep, Glob, Bash, mcp__codegraph__codegraph_explore
 maxTurns: 10

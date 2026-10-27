@@ -1,7 +1,7 @@
 ---
 name: consistency-checker
 description: Cheap verification agent. Runs Gradle/CI-equivalent commands and docs/boundary checks, then validates architecture and documentation consistency after a work package or phase gate. Returns PASS/FAIL/NOT_RUN with evidence.
-model: claude-haiku-5-5
+model: claude-sonnet-5-5
 effort: low
 tools: Read, Grep, Glob, Bash, Write, mcp__codegraph__codegraph_explore
 maxTurns: 12
