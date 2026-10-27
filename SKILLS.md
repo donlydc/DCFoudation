@@ -18,6 +18,12 @@
 - Áp dụng cùng quy tắc trong prompt của mọi subagent có khám phá mã.
 - Cấu hình dự án: `.mcp.json` (MCP server `codegraph`), `.claude/settings.json` (quyền `mcp__codegraph__*` và hook `UserPromptSubmit`).
 
+## Agents và kế hoạch triển khai
+
+- Kế hoạch R0–R9 chia theo agent: `plan/AGENT_EXECUTION_PLAN.md` (nguồn yêu cầu: `plan/FOUNDATION_MASTER_PLAN.md`, chỉ trích mục cần bằng `sed`).
+- Agent: `.claude/agents/` — `architecture-reader`, `consistency-checker` (Haiku); `architecture-writer`, `implementation-worker` (Sonnet); `critical-architecture-auditor` (Opus, chỉ leo thang).
+- Bàn giao giữa agent qua `reports/wp/<WP-ID>.md`, không qua log thô.
+
 ## AgentMemory
 
 - Tra cứu bộ nhớ theo ngữ cảnh dự án trước khi bắt đầu một tác vụ không tầm thường.

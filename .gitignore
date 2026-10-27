@@ -90,6 +90,9 @@ lint-results*
 lint-report*
 test-results/
 reports/
+# Root-level agent evidence reports are tracked; raw logs are not
+!/reports/
+/reports/logs/
 
 # Heap / profiling dumps
 *.hprof
