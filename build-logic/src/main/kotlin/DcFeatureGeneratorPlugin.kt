@@ -28,6 +28,7 @@ class DcFeatureGeneratorPlugin : Plugin<Project> {
                 backgroundWork.convention(booleanProperty("backgroundWork"))
                 mainSourceRoot.convention(layout.projectDirectory.dir("src/main/java"))
                 testSourceRoot.convention(layout.projectDirectory.dir("src/test/java"))
+                architectureRoot.convention(rootProject.layout.projectDirectory.dir("architecture/features"))
             }
         }
     }

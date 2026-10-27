@@ -34,6 +34,10 @@ abstract class CreateFeatureTask : DefaultTask() {
     @get:Internal
     abstract val testSourceRoot: DirectoryProperty
 
+    /** Optional (additive): where `<feature>.md` is written; unset skips the architecture page. */
+    @get:Internal
+    abstract val architectureRoot: DirectoryProperty
+
     init {
         group = "dc scaffolding"
         description = "Creates an explicit UDF feature scaffold without overwriting existing files."
@@ -46,6 +50,7 @@ abstract class CreateFeatureTask : DefaultTask() {
             FeatureScaffoldGenerator.generate(
                 mainSourceRoot = mainSourceRoot.get().asFile.toPath(),
                 testSourceRoot = testSourceRoot.get().asFile.toPath(),
+                architectureRoot = architectureRoot.orNull?.asFile?.toPath(),
                 options = FeatureGeneratorOptions(
                     featureName = featureName.get(),
                     basePackage = basePackage.get(),

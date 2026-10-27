@@ -91,4 +91,55 @@ class FeatureScaffoldGeneratorTest {
         assertTrue(error is IllegalStateException)
         assertEquals("owned content", Files.readString(stateFile))
     }
+
+    @Test
+    fun `architecture page skeleton follows the feature template and stays DRAFT NOT_RUN`() {
+        val root = temporaryFolder.root.toPath()
+        val template = generateSequence(java.nio.file.Paths.get("").toAbsolutePath()) { it.parent }
+            .map { it.resolve("architecture/features/TEMPLATE.md") }
+            .firstOrNull(Files::exists)
+
+        val result = FeatureScaffoldGenerator.generate(
+            mainSourceRoot = root.resolve("main"),
+            testSourceRoot = root.resolve("test"),
+            options = FeatureGeneratorOptions("Profile", "com.example", navigation = true),
+            architectureRoot = root.resolve("architecture/features")
+        )
+
+        val page = root.resolve("architecture/features/profile.md")
+        assertTrue(page in result.files)
+        val text = Files.readString(page)
+        val lines = text.lines()
+        assertEquals("# FEATURE: profile", lines[0])
+        assertEquals("Status: DRAFT", lines[1])
+        assertTrue("Test status: NOT_RUN" in lines)
+        assertTrue(text.contains("`com.example.profile`"))
+        assertTrue(text.contains("`ProfileDestination`"))
+        // Headings must match the template one-to-one (skipped when the template is not reachable).
+        if (template != null) {
+            val heading = Regex("^## \\d+\\. .*")
+            val expected = Files.readAllLines(template).filter(heading::matches)
+            assertEquals(expected, lines.filter(heading::matches))
+        }
+    }
+
+    @Test
+    fun `no architecture root means no page and an existing page aborts everything`() {
+        val root = temporaryFolder.root.toPath()
+        val options = FeatureGeneratorOptions("Profile", "com.example")
+
+        val plain = FeatureScaffoldGenerator.generate(root.resolve("m1"), root.resolve("t1"), options)
+        assertFalse(plain.files.any { it.fileName.toString().endsWith(".md") })
+
+        val arch = root.resolve("arch")
+        Files.createDirectories(arch)
+        Files.writeString(arch.resolve("profile.md"), "owned page")
+        val error = runCatching {
+            FeatureScaffoldGenerator.generate(root.resolve("m2"), root.resolve("t2"), options, arch)
+        }.exceptionOrNull()
+
+        assertTrue(error is IllegalStateException)
+        assertEquals("owned page", Files.readString(arch.resolve("profile.md")))
+        assertFalse(Files.exists(root.resolve("m2")))
+    }
 }

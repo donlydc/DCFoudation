@@ -32,7 +32,9 @@ internal object FeatureScaffoldGenerator {
     fun generate(
         mainSourceRoot: Path,
         testSourceRoot: Path,
-        options: FeatureGeneratorOptions
+        options: FeatureGeneratorOptions,
+        /** Directory for `<feature>.md` (normally `architecture/features`); null skips the page. */
+        architectureRoot: Path? = null
     ): GeneratedFeature {
         val classPrefix = validateFeatureName(options.featureName)
         val basePackage = validateBasePackage(options.basePackage)
@@ -78,6 +80,11 @@ internal object FeatureScaffoldGenerator {
         plannedFiles[testFeatureRoot.resolve("${classPrefix}ViewModelTest.kt")] =
             viewModelTest(packageName, classPrefix, options.permission)
 
+        if (architectureRoot != null) {
+            plannedFiles[architectureRoot.resolve("$featureSegment.md")] =
+                architecturePage(featureSegment, packageName, classPrefix, options)
+        }
+
         val conflicts = plannedFiles.keys.filter(Files::exists)
         check(conflicts.isEmpty()) {
             "Feature generation stopped because these files already exist:\n" +
@@ -117,6 +124,75 @@ internal object FeatureScaffoldGenerator {
             "Invalid base package '$value'."
         }
         return value
+    }
+
+    /**
+     * Skeleton of `architecture/features/TEMPLATE.md`: same numbered headings, Status DRAFT,
+     * Test status NOT_RUN. Only facts known to the generator are filled; the rest stays `TODO`.
+     */
+    private fun architecturePage(
+        segment: String,
+        packageName: String,
+        name: String,
+        options: FeatureGeneratorOptions
+    ): String {
+        val navigation = if (options.navigation) {
+            "`${name}Destination` created; register it at the app navigation point (NAV-01)."
+        } else {
+            "none generated (TODO)"
+        }
+        val effect = if (options.permission) "`${name}UiEffect` (permission launch)" else "none"
+        val testPath = "`${name}ViewModelTest` (generated skeleton)"
+        return listOf(
+            "# FEATURE: $segment",
+            "Status: DRAFT",
+            "Verified commit: UNKNOWN",
+            "Last source audit: NOT_RUN",
+            "Test status: NOT_RUN",
+            "",
+            "## 1. Identity and scope",
+            "- Package / owning module: `$packageName`",
+            "- Purpose (1 line) and non-goals: TODO",
+            "- Role: TODO (reference | showcase | production feature)",
+            "",
+            "## 2. Presentation contract (UDF — UI-01/UI-02)",
+            "- Route composable (stateful entry, collects state): `${name}Route`",
+            "- Screen composable (stateless; state down, actions up): `${name}Screen`",
+            "- ViewModel (`@HiltViewModel`; no `BaseViewModel`, UI-03): `${name}ViewModel`",
+            "- UiState (durable, includes user messages): `${name}UiState`",
+            "- UiAction (sealed; every user intent): `${name}UiAction`",
+            "- UiEffect (only immediate one-shot UI integration; or `none`): $effect",
+            "",
+            "## 3. DI and ownership",
+            "- Constructor dependencies (interfaces from which module): none yet (TODO)",
+            "- Hilt module / bindings and scope (DI-01, DI-02): TODO",
+            "- State owner for any persisted/shared state (CFG-02): TODO",
+            "",
+            "## 4. Data flow",
+            "TODO: Screen -> UiAction -> ViewModel -> Repository -> DataSource -> UiState (name real symbols).",
+            "- Error mapping (infrastructure exception -> `AppError` -> user message; ERR-01/INV-07): TODO",
+            "- Threading (`DispatcherProvider`; THR-02): TODO",
+            "",
+            "## 5. Navigation entry",
+            "- $navigation",
+            "",
+            "## 6. Design system usage",
+            "- `DcTheme` and `DcLoadingState` used by the generated Screen/Preview (DS-01/DS-03); TODO others.",
+            "",
+            "## 7. Tests and evidence",
+            "- ViewModel unit test (TST-01): $testPath; Compose UI test (TST-02): TODO",
+            "- Commands: TODO",
+            "- Test status: NOT_RUN",
+            "",
+            "## 8. Known debt / decisions",
+            "- none recorded",
+            "",
+            "## 9. AI playbook",
+            "- Read → Graph → Propose → Edit → Test → Update docs → Handover.",
+            "- Add this feature to `architecture/context-map.yaml` and `architecture/module-map.md` " +
+                "so it is discoverable; then run `python3 tools/check_architecture.py`.",
+            "- Generator: `createFeature` scaffold (`architecture/20-feature-template.md`) for sibling features."
+        ).joinToString("\n")
     }
 
     private fun uiState(packageName: String, name: String) = """
