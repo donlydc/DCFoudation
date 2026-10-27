@@ -64,6 +64,50 @@ Wave 5  R6 → R7
 Wave 6  R8, R9  chỉ khi người dùng xác nhận consumer thật
 ```
 
+## 3a. Phân chia lại theo luồng song song (hiệu lực từ sau R1)
+
+> Theo yêu cầu người dùng: các WP còn lại (R2–R7) chạy **song song theo luồng (lane)**, mỗi lane sở hữu một
+> tập đường dẫn không giao nhau; **Sonnet review một lần cho mỗi lane** (`wp-reviewer`), và
+> **`critical-architecture-auditor` (Opus) review toàn bộ một lượt khi mọi lane hoàn tất**.
+> Các điểm leo thang Opus riêng lẻ ở §2.1 được gộp vào lượt review cuối này: quyết định thiết kế (R3.0, R5.0,
+> R6.0, R7.2) do `architecture-writer` (Sonnet) soạn trong lane, ghi DEC ở trạng thái PROPOSED, Opus chốt ở lượt cuối.
+
+### Wave A — chạy song song ngay sau gate R1
+
+| Lane | WP gộp | Agent | Đường dẫn được sửa (độc quyền) |
+|---|---|---|---|
+| A1 Build & CI guard | R2.1 (KD-02), R2.3 | implementation-worker | `build-logic/**`, `.github/**`, `tools/**`, `architecture/dependency-rules.md`, `architecture/modules/build-logic.md`, `architecture/19-*` |
+| A2 Platform & observability tests | R2.2 | implementation-worker | `platform/**`, `observability/**`, `architecture/modules/platform-*.md`, `architecture/modules/observability.md` |
+| A3 Core & runtime | R3.0 → R3.1, R3.2, R3.3 | architecture-writer → implementation-worker | `foundation/**`, `runtime/**`, `testing/**`, `architecture/modules/{foundation,runtime-*,testing}.md`, `architecture/09-*`, `11-*`, `14-*` |
+| A4 Design system | R4.1 → R4.5 | architecture-reader → architecture-writer → implementation-worker | `ui/designsystem/**`, `architecture/modules/ui-designsystem.md`, `architecture/07-design-system/**` |
+
+### Wave B — sau Wave A (phụ thuộc hợp đồng `AppError`/concurrency của A3)
+
+| Lane | WP gộp | Đường dẫn |
+|---|---|---|
+| B1 Network & preferences | R5.1 | `data/network/**`, `data/preferences/**`, docs tương ứng |
+| B2 Security & observability | R5.2 | `security/**`, `observability/**`, docs tương ứng |
+| B3 Database | R5.0 (D-01) → R5.3 | `data/database/**`, docs tương ứng, DEC PROPOSED |
+
+### Wave C — sau Wave B
+
+| Lane | WP gộp | Đường dẫn |
+|---|---|---|
+| C1 Navigation & permission | R6.0 → R6.1 | `platform/**`, docs tương ứng |
+| C2 Reference app journeys | R6.2 | `app/**`, `architecture/modules/app.md`, `architecture/features/**` |
+| C3 Developer experience | R7.1, R7.2, R7.3 | `build-logic/**` (generator), `README.md`, `CHANGELOG.md`, DEC PROPOSED (qua mục D) |
+
+### Quy tắc lane
+
+- Tệp dùng chung (`architecture/context-map.yaml`, `module-map.md`, `22-known-deviations.md`, `23-decision-log.md`,
+  `HANDOVER.md`): lane **không sửa trực tiếp**, chỉ ghi đề xuất vào mục D của báo cáo lane; phiên chính hợp nhất
+  sau mỗi wave (tránh xung đột khi chạy song song).
+- Mỗi lane kết thúc: `reports/wp/<LANE>.md` → `wp-reviewer` (Sonnet) → `reports/wp/<LANE>.review.md` → commit khi APPROVE.
+- Kết thúc mọi wave: `consistency-checker` chạy `tools/check_architecture.py` + kiểm tra ranh giới, rồi
+  **Opus final review** → `reports/final-review.md`; các phát hiện blocking giao lại đúng lane để sửa.
+- Build Android hiện **NOT_RUN** (mạng chặn `dl.google.com`, `api.foojay.io`): mọi thay đổi Kotlin ghi rõ chưa biên dịch;
+  lane không được tuyên bố PASS. Khi môi trường mở mạng, chạy lại `consistency-checker` toàn bộ trước khi merge.
+
 ## 4. Work packages
 
 "Đọc" là danh sách tối đa; ngoài ra agent chỉ mở thêm tệp khi CodeGraph chỉ ra phụ thuộc.
