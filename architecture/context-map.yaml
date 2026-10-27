@@ -1,0 +1,113 @@
+# Machine-readable context map (MP §3.4). POINTERS ONLY - never copy code; source/build files remain truth.
+# Written by R1.0 from reports/baseline-verification.md Part A + module build files + codegraph_explore.
+# Consumed by tools/check_architecture.py (R1.3). Update in the same WP that changes a module's API/deps (MP §10.4).
+#
+# Schema (schema_version: 1)
+#   modules[]:   id, gradle_path, kind (jvm|android-library|android-app|included-build), doc,
+#                source_roots[], test_roots[] (existing dirs only), entry_symbols[] (2-6 real public symbols),
+#                depends_on[] (production project deps), test_depends_on[] (test-only project deps),
+#                owners_rules[] (rule IDs from architecture/01..24), doc_status, test_status, evidence
+#                (test_depends_on is optional; omitted when a module has no test-only project deps)
+#   features[]:  id, package, owning_module, doc, entry_symbols[], depends_on_modules[], owners_rules[], doc_status, test_status, evidence
+#   doc_status:  DRAFT | VERIFIED | NEEDS_REFRESH      (freshness of the doc page; VERIFIED needs commit + audit date in the page)
+#   test_status: NOT_RUN | TESTED | FAILED | BLOCKED   (TESTED/FAILED require an evidence path under reports/)
+#   doc files architecture/modules/*.md and architecture/features/{greeting,articles,showcase}.md are created in R1.1/R1.2.
+schema_version: 1
+root_architecture: architecture/00-index.md
+protocol: architecture/context-protocol.md
+rules:
+  - architecture/01-overview-and-invariants.md
+  - architecture/02-layers-and-dependencies.md
+  - architecture/22-known-deviations.md
+  - architecture/23-decision-log.md
+  - architecture/24-ai-reading-guide.md
+  - architecture/dependency-rules.md
+  - architecture/module-map.md
+
+
+
+modules:
+  - {id: foundation, gradle_path: ":foundation", kind: jvm, doc: architecture/modules/foundation.md,
+     source_roots: ["foundation/src/main/kotlin"], test_roots: ["foundation/src/test"],
+     entry_symbols: ["AppError", "isRetryable"],
+     depends_on: [],
+     owners_rules: ["INV-07", "ERR-01"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: ui-designsystem, gradle_path: ":ui:designsystem", kind: android-library, doc: architecture/modules/ui-designsystem.md,
+     source_roots: ["ui/designsystem/src/main/java", "ui/designsystem/src/main/res"], test_roots: ["ui/designsystem/src/test", "ui/designsystem/src/androidTest"],
+     entry_symbols: ["DcTheme", "DcContentState", "DesignSystemCatalog", "DcSpacing", "DcColors"],
+     depends_on: [],
+     owners_rules: ["INV-08", "DS-01", "DS-02", "DS-03"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: runtime-concurrency, gradle_path: ":runtime:concurrency", kind: jvm, doc: architecture/modules/runtime-concurrency.md,
+     source_roots: ["runtime/concurrency/src/main/kotlin"], test_roots: ["runtime/concurrency/src/test"],
+     entry_symbols: ["DispatcherProvider", "DefaultDispatcherProvider", "SingleFlight", "JobRegistry", "AppCoroutineScope", "RetryPolicy"],
+     depends_on: [],
+     owners_rules: ["THR-01", "THR-02", "INV-05", "INV-06"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: runtime-scheduling, gradle_path: ":runtime:scheduling", kind: android-library, doc: architecture/modules/runtime-scheduling.md,
+     source_roots: ["runtime/scheduling/src/main/java"], test_roots: ["runtime/scheduling/src/test"],
+     entry_symbols: ["DcScheduler", "AndroidDcScheduler", "DcWorkScheduler", "DcWorker", "DcJobSpec", "DcScheduleOutcome"],
+     depends_on: [":foundation", ":runtime:concurrency"],
+     owners_rules: ["BG-01", "BG-02"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: data-preferences, gradle_path: ":data:preferences", kind: android-library, doc: architecture/modules/data-preferences.md,
+     source_roots: ["data/preferences/src/main/java"], test_roots: ["data/preferences/src/test"],
+     entry_symbols: ["PreferencesDataSource", "DataStorePreferencesDataSource", "PreferenceKey"],
+     depends_on: [],
+     owners_rules: ["DAT-01"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: data-database, gradle_path: ":data:database", kind: android-library, doc: architecture/modules/data-database.md,
+     source_roots: ["data/database/src/main/java"], test_roots: ["data/database/src/test"],
+     entry_symbols: ["DcDatabase", "RoomDatabaseFactory", "ArticleDao", "StalenessPolicy", "TransactionRunner"],
+     depends_on: [":runtime:concurrency"],
+     owners_rules: ["DAT-ROOM-01", "DAT-CACHE-01", "ERR-01"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: data-network, gradle_path: ":data:network", kind: android-library, doc: architecture/modules/data-network.md,
+     source_roots: ["data/network/src/main/java"], test_roots: ["data/network/src/test"],
+     entry_symbols: ["NetworkClientFactory", "NetworkResult", "HttpErrorBodyParser"],
+     depends_on: [":foundation", ":observability"],
+     owners_rules: ["DAT-NET-01", "ERR-01", "SEC-01"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: platform-navigation, gradle_path: ":platform:navigation", kind: android-library, doc: architecture/modules/platform-navigation.md,   # no src/test
+     source_roots: ["platform/navigation/src/main/java"], test_roots: [],
+     entry_symbols: ["Destination"],
+     depends_on: [],
+     owners_rules: ["NAV-01"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: platform-permission, gradle_path: ":platform:permission", kind: android-library, doc: architecture/modules/platform-permission.md,   # no src/test
+     source_roots: ["platform/permission/src/main/java"], test_roots: [],
+     entry_symbols: ["PermissionState", "NotificationPermission"],
+     depends_on: [],
+     owners_rules: ["PERM-01"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: security, gradle_path: ":security", kind: android-library, doc: architecture/modules/security.md,
+     source_roots: ["security/src/main/java"], test_roots: ["security/src/test"],
+     entry_symbols: ["SecureStorage", "EncryptedSharedPreferencesSecureStorage", "SecureStorageUnavailableException"],
+     depends_on: [":runtime:concurrency"],
+     owners_rules: ["SEC-01", "SEC-02"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: observability, gradle_path: ":observability", kind: android-library, doc: architecture/modules/observability.md,   # no src/test
+     source_roots: ["observability/src/main/java"], test_roots: [],
+     entry_symbols: ["Logger", "AndroidLogger", "AnalyticsTracker", "CrashReporter", "LoggingAnalyticsTracker", "LoggingCrashReporter"],
+     depends_on: [],
+     owners_rules: ["OBS-01", "OBS-ANALYTICS-01", "OBS-CRASH-01", "SEC-01"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: testing, gradle_path: ":testing", kind: android-library, doc: architecture/modules/testing.md,   # depends_on are api(...) edges
+     source_roots: ["testing/src/main/java"], test_roots: ["testing/src/test"],
+     entry_symbols: ["MainDispatcherRule", "FakeDispatcherProvider", "InMemoryPreferencesDataSource", "FakeScheduler", "RecordingLogger"],
+     depends_on: [":runtime:concurrency", ":data:preferences", ":observability", ":runtime:scheduling"],
+     owners_rules: ["TST-01", "TST-02", "BLD-03"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: app, gradle_path: ":app", kind: android-app, doc: architecture/modules/app.md,
+     source_roots: ["app/src/main/java", "app/src/main/res"], test_roots: ["app/src/test", "app/src/androidTest"],
+     entry_symbols: ["DcApplication", "MainActivity", "ConcurrencyModule", "DatabaseModule", "NetworkModule", "AppEnvironmentProvider"],
+     depends_on: [":foundation", ":ui:designsystem", ":runtime:concurrency", ":data:preferences", ":data:network", ":data:database", ":observability", ":platform:navigation", ":platform:permission", ":runtime:scheduling", ":security"], test_depends_on: [":testing"],
+     owners_rules: ["DI-01", "DI-02", "DI-03", "DI-04", "CFG-01", "CFG-02", "CFG-03", "NAV-01", "DEP-01", "DEP-02", "DEP-03"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: build-logic, gradle_path: "includeBuild:build-logic", kind: included-build, doc: architecture/modules/build-logic.md,   # settings.gradle.kts includeBuild; not a project of the main build
+     source_roots: ["build-logic/src/main/kotlin"], test_roots: ["build-logic/src/test"],
+     entry_symbols: ["DcAndroidLibraryConventionPlugin", "DcAndroidApplicationConventionPlugin", "DcKotlinJvmConventionPlugin", "DcFeatureGeneratorPlugin", "FeatureScaffoldGenerator"],
+     depends_on: [],
+     owners_rules: ["BLD-01", "BLD-02", "BLD-03"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+
+features:
+  - {id: greeting, package: com.dc.android.foundation.greeting, owning_module: app, doc: architecture/features/greeting.md,
+     entry_symbols: ["GreetingRoute", "GreetingViewModel", "GreetingUiState", "GreetingUiAction"],
+     depends_on_modules: ["data-preferences", "ui-designsystem", "observability"],   # R1.2 to confirm from imports
+     owners_rules: ["UI-01", "UI-02", "UI-03", "TST-01", "DI-03"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: articles, package: com.dc.android.foundation.articles, owning_module: app, doc: architecture/features/articles.md,
+     entry_symbols: ["ArticlesRoute", "ArticlesViewModel", "ArticlesRepository", "ArticlesSyncWorker", "ArticlesUiState", "ArticlesUiAction"],
+     depends_on_modules: ["data-network", "data-database", "platform-permission", "runtime-scheduling", "observability", "ui-designsystem"],   # R1.2 to confirm from imports
+     owners_rules: ["UI-01", "UI-02", "UI-03", "TST-01", "DAT-CACHE-01", "PERM-01", "DI-03"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
+  - {id: showcase, package: com.dc.android.foundation.showcase, owning_module: app, doc: architecture/features/showcase.md,
+     entry_symbols: ["TripShowcaseHost"],
+     depends_on_modules: ["ui-designsystem"],   # R1.2 to confirm from imports
+     owners_rules: ["DS-01", "DS-03"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}

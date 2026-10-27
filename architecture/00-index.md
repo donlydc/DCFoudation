@@ -5,6 +5,16 @@
 1. [`01-overview-and-invariants.md`](01-overview-and-invariants.md)
 2. [`24-ai-reading-guide.md`](24-ai-reading-guide.md)
 
+## Architecture-as-Context
+
+Navigation aids for AI agents and humans (NOT_RUN status everywhere until evidence exists; module/feature pages are created in R1.1/R1.2):
+
+- [`context-protocol.md`](context-protocol.md) - mandatory discovery sequence, refresh rules, handoff report convention
+- [`context-map.yaml`](context-map.yaml) - machine-readable pointers per module and feature
+- [`module-map.md`](module-map.md) - module table: kind, responsibility, direct deps, doc, test status
+- [`dependency-rules.md`](dependency-rules.md) - allowed/forbidden module edges (enforcement not automated; KD-02)
+- [`modules/TEMPLATE.md`](modules/TEMPLATE.md), [`features/TEMPLATE.md`](features/TEMPLATE.md) - page templates
+
 ## Status
 
 This tree began as a phase-by-phase implementation plan and is now a living description of the verified source. Check [`../PLAN_REPORT.md`](../PLAN_REPORT.md) and [`../BASE_PROJECT_ROADMAP.md`](../BASE_PROJECT_ROADMAP.md) for historical progress and the current P0–P2 backlog. A document must distinguish implemented behavior from optional/target behavior.
