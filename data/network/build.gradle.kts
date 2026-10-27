@@ -10,7 +10,6 @@ android {
 
 dependencies {
     implementation(project(":foundation"))
-    implementation(project(":observability"))
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.okhttp.core)

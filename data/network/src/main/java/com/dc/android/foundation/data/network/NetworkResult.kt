@@ -22,10 +22,35 @@ sealed interface NetworkResult<out T> {
 }
 
 /**
- * Runs [block] and maps it to a [NetworkResult] at the data-source boundary (ERR-01):
- * [IOException] and [HttpException] are the expected/anticipated failure modes for a network call
- * and are mapped to the stable [AppError] vocabulary here. Anything else is an
- * unexpected/programming-error condition and is rethrown rather than silently swallowed.
+ * Runs [block] and maps it to a [NetworkResult] at the data-source boundary (ERR-01).
+ *
+ * Error-response contract (NET-01/NET-05):
+ *
+ * | Thrown by [block]                              | Result                                                    |
+ * |------------------------------------------------|-----------------------------------------------------------|
+ * | none                                           | [NetworkResult.Success]                                   |
+ * | [IOException] (DNS, connect, TLS, timeout, reset) | `Failure(AppError.Connectivity(cause))`                |
+ * | [HttpException] (any non-2xx status)           | `Failure(AppError.Http(code, serverMessage, cause))`      |
+ * | [SerializationException] (malformed 2xx body)  | `Failure(AppError.Serialization(cause))`                  |
+ * | `CancellationException`                        | rethrown unchanged (structured concurrency is preserved)  |
+ * | anything else                                  | rethrown: programming error, never silently swallowed     |
+ *
+ * `HttpException` is matched by type, never by status: the HTTP code is carried verbatim in
+ * [AppError.Http.code] and retry classification belongs to [AppError], not to this function.
+ *
+ * [errorBodyParser] is the only place a server error payload is read. Its result becomes
+ * [AppError.Http.serverMessage]; if the parser returns `null` or throws, `serverMessage` is `null`
+ * (a faulty parser can never turn an HTTP failure into a crash). The raw body is never retained
+ * or logged. The default [NoOpHttpErrorBodyParser] discards the payload.
+ *
+ * Client configuration (timeouts, shared headers, request id) is declared in [NetworkClientConfig];
+ * retry is intentionally not part of either type.
+ *
+ * Sample (feature-owned data source):
+ * ```
+ * suspend fun fetchArticles(): NetworkResult<List<ArticleDto>> =
+ *     safeApiCall(errorBodyParser = ArticlesErrorParser) { api.getPosts() }
+ * ```
  */
 suspend fun <T> safeApiCall(
     errorBodyParser: HttpErrorBodyParser = NoOpHttpErrorBodyParser,
