@@ -11,6 +11,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.dc.android.foundation.designsystem.tokens.LocalDcSpacing
 
 internal enum class DcContentStateBranch { Content, Error, Loading, Empty }
@@ -60,7 +62,13 @@ fun <T> DcContentState(
     )) {
         DcContentStateBranch.Content -> Column(modifier = modifier) {
             if (errorMessage != null) DcOfflineBanner(message = errorMessage)
-            if (isLoading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            if (isLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = loadingLabel }
+                )
+            }
             content(requireNotNull(value))
         }
         DcContentStateBranch.Error -> Box(modifier = modifier.fillMaxSize()) { errorContent(requireNotNull(errorMessage)) }
@@ -72,7 +80,19 @@ fun <T> DcContentState(
 /**
  * Displays each durable state message once, then immediately acknowledges it through
  * [onMessageShown]. The message remains state-owned; this composable owns only the UI effect.
+ *
+ * Legacy Material-typed overload kept for source compatibility (DEC-08). Prefer the
+ * [DcSnackbarMessage]/[DcSnackbarHostState] overload in `DcMessageComponents.kt`, which also
+ * supports tone, action and duration; migrating also means hosting the snackbar with
+ * `DcSnackbarHost(DcSnackbarHostState)` instead of Material's `SnackbarHost`.
  */
+@Deprecated(
+    message = "Use the DcSnackbarMessage/DcSnackbarHostState overload and DcSnackbarHost (DEC-08).",
+    replaceWith = ReplaceWith(
+        expression = "DcSnackbarEffect(message?.let { DcSnackbarMessage(it) }, snackbarHostState, onMessageShown)",
+        imports = ["com.dc.android.foundation.designsystem.components.DcSnackbarMessage"]
+    )
+)
 @Composable
 fun DcSnackbarEffect(
     message: String?,

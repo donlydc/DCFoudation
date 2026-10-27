@@ -73,6 +73,7 @@ internal fun ExtendedCatalogSections() {
 
         CatalogSection("16. Selection") {
             DcSegmentedButton(Ranges, segmented, { segmented = it })
+            DcMultiSegmentedButton(Ranges, chips, { chips = it })
             DcChipGroup(Ranges, chips, { chips = it }, selectionMode = DcSelectionMode.Multiple)
             DcChipGroup(Ranges, chips, { chips = it }, selectionMode = DcSelectionMode.SingleOptional, layout = DcChipGroupLayout.Scroll)
             DcRadioGroup(Ranges, radio, { radio = it }, label = "Range")

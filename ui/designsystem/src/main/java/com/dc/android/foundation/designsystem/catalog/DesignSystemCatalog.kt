@@ -21,11 +21,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -52,7 +50,6 @@ fun DesignSystemCatalog(modifier: Modifier = Modifier) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var dialog by rememberSaveable { mutableStateOf<String?>(null) }
     var showSheet by rememberSaveable { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
 
     Column(
         modifier = modifier.verticalScroll(rememberScrollState()).padding(spacing.medium),
@@ -70,6 +67,7 @@ fun DesignSystemCatalog(modifier: Modifier = Modifier) {
             DcButton("Disabled", onClick = {}, enabled = false)
             DcButton("Loading", onClick = {}, loading = true)
             DcButton("With icon", onClick = {}, leadingIcon = Icons.Filled.Check)
+            DcButton(onClick = {}, variant = DcButtonVariant.Secondary) { DcText("Slot content") }
             DcPrimaryActionButton("Full-width primary action", onClick = {})
             DcText("Pressed treatment follows Material interaction state.", style = MaterialTheme.typography.bodySmall)
             DcTextLink("Text link", onClick = {})
@@ -162,6 +160,7 @@ fun DesignSystemCatalog(modifier: Modifier = Modifier) {
                 headline = "Account settings", supportingText = "Manage sign-in and security",
                 leadingContent = { DcAvatar("Donly") }, selected = true, onClick = {}
             )
+            DcListRow(onClick = {}) { DcText("Slot list row") }
             DcAsyncImage(null, "Empty image sample", modifier = Modifier.size(48.dp))
             DcDivider(leadingInset = true)
         }
@@ -206,7 +205,6 @@ fun DesignSystemCatalog(modifier: Modifier = Modifier) {
                 value = listOf("Cached item"), isLoading = true,
                 errorMessage = "Showing cached data while refreshing"
             ) { DcText(it.first()) }
-            DcSnackbarEffect(null, snackbarHostState, {})
         }
 
         ExtendedCatalogSections()

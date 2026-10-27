@@ -32,9 +32,12 @@ fun DcSearchBar(
         keyboardActions = KeyboardActions(onSearch = { onSearch() }),
         trailingContent = if (query.isEmpty()) null else {
             {
-                androidx.compose.material3.TextButton(onClick = { onQueryChange("") }) {
-                    DcText(clearLabel, style = androidx.compose.material3.MaterialTheme.typography.labelLarge)
-                }
+                DcButton(
+                    text = clearLabel,
+                    onClick = { onQueryChange("") },
+                    variant = DcButtonVariant.Text,
+                    enabled = enabled
+                )
             }
         }
     )

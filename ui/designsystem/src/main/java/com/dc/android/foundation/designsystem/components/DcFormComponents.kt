@@ -52,6 +52,7 @@ import com.dc.android.foundation.designsystem.R
 import com.dc.android.foundation.designsystem.preview.DcThemePreviews
 import com.dc.android.foundation.designsystem.theme.DcTheme
 import com.dc.android.foundation.designsystem.tokens.LocalDcSpacing
+import com.dc.android.foundation.designsystem.tokens.StrokeTokens
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -95,7 +96,7 @@ fun DcFormSection(
     content: @Composable () -> Unit
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(LocalDcSpacing.current.component)) {
-        title?.let { DcSectionHeader(it, supportingText = supportingText, contentPadding = PaddingValues(0.dp)) }
+        title?.let { DcSectionHeader(it, supportingText = supportingText, contentPadding = PaddingValues(LocalDcSpacing.current.none)) }
         content()
     }
 }
@@ -263,7 +264,7 @@ fun DcOtpField(
                             Modifier
                                 .width(44.dp)
                                 .height(56.dp)
-                                .border(BorderStroke(if (focused) 2.dp else 1.dp, borderColor), MaterialTheme.shapes.medium)
+                                .border(BorderStroke(if (focused) 2.dp else StrokeTokens.Hairline, borderColor), MaterialTheme.shapes.medium)
                                 .clearAndSetSemantics {},
                             contentAlignment = Alignment.Center
                         ) {

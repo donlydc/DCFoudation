@@ -41,7 +41,11 @@ fun DcToggleRow(
             .toggleable(
                 value = checked,
                 enabled = enabled,
-                role = if (control == DcToggleControl.Radio) Role.RadioButton else Role.Checkbox,
+                role = when (control) {
+                    DcToggleControl.Checkbox -> Role.Checkbox
+                    DcToggleControl.Switch -> Role.Switch
+                    DcToggleControl.Radio -> Role.RadioButton
+                },
                 onValueChange = onCheckedChange
             )
             .padding(horizontal = LocalDcSpacing.current.medium, vertical = LocalDcSpacing.current.small),

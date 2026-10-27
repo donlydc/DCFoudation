@@ -28,4 +28,19 @@ class DcContentStatePolicyTest {
         DcContentStateBranch.Empty,
         resolveDcContentStateBranch(hasContent = false, isLoading = false, hasError = false)
     )
+
+    @Test fun `content without loading or error renders content`() = assertEquals(
+        DcContentStateBranch.Content,
+        resolveDcContentStateBranch(hasContent = true, isLoading = false, hasError = false)
+    )
+
+    @Test fun `content with loading and error still renders content`() = assertEquals(
+        DcContentStateBranch.Content,
+        resolveDcContentStateBranch(hasContent = true, isLoading = true, hasError = true)
+    )
+
+    @Test fun `empty error without loading renders error`() = assertEquals(
+        DcContentStateBranch.Error,
+        resolveDcContentStateBranch(hasContent = false, isLoading = false, hasError = true)
+    )
 }

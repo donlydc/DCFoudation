@@ -97,7 +97,7 @@ fun DcBadgedBox(
 @Composable
 private fun DcBadgePreview() {
     DcTheme {
-        androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
+        androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(LocalDcSpacing.current.medium)) {
             DcBadge()
             DcBadge(count = 3)
             DcBadge(count = 120)

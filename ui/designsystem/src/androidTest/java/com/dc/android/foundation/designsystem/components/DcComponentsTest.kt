@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -45,6 +46,7 @@ class DcComponentsTest {
         composeRule.runOnIdle { assertEquals(normalHeight, loadingHeight, 0.5f) }
     }
 
+    @Suppress("DEPRECATION") // intentionally covers the legacy Material-typed overload (DEC-08)
     @Test
     fun snackbarAcknowledgesOneMessageOnce() {
         var acknowledgements = 0
@@ -53,6 +55,28 @@ class DcComponentsTest {
             DcSnackbarEffect(message = "Saved", snackbarHostState = hostState) { acknowledgements++ }
         }
         composeRule.runOnIdle { assertEquals(1, acknowledgements) }
+    }
+
+    @Test
+    fun typedSnackbarAcknowledgesOneMessageOnce() {
+        var acknowledgements = 0
+        composeRule.setContent {
+            val hostState = remember { DcSnackbarHostState() }
+            DcSnackbarEffect(
+                message = DcSnackbarMessage("Saved"),
+                state = hostState,
+                onMessageShown = { acknowledgements++ }
+            )
+        }
+        composeRule.runOnIdle { assertEquals(1, acknowledgements) }
+    }
+
+    @Test
+    fun switchToggleRowExposesSwitchRole() {
+        composeRule.setContent {
+            DcToggleRow("Wi-Fi", checked = true, onCheckedChange = {}, control = DcToggleControl.Switch)
+        }
+        composeRule.onNode(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)).assertExists()
     }
 
     @Test
