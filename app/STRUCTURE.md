@@ -2,7 +2,7 @@
 
 **Role:** composition root, application shell, and reference features.
 
-**Owns:** `DcApplication`, `MainActivity`, Hilt wiring in `di/`, environment/user configuration, and the `greeting`/`articles` feature packages.
+**Owns:** `DcApplication`, `MainActivity`, Hilt wiring in `di/`, environment/user configuration, the `greeting`/`articles` feature packages, and the `showcase/trip` design-system demo screens (not a real feature).
 
 ## AI guidance
 

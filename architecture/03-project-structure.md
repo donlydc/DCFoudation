@@ -34,6 +34,8 @@ DCAndroidFoundation/
 - Android modules use compile/target SDK 37, min SDK 24 and Java 11 compatibility; KSP is used for Hilt/Room where needed.
 - `:app` depends one-way on reusable capability modules. Feature packages do not import one another's private implementation.
 
+Per-folder architecture map: [`../STRUCTURE.md`](../STRUCTURE.md); each module also carries a compact `STRUCTURE.md` routing card.
+
 ## Target structure and split policy
 
 Root [`CLAUDE.md`](../CLAUDE.md) §1 describes a larger capability map. `:testing` now has a real reuse boundary, while `build-logic` is an included build rather than an application module. `ui/components`, `ui/adaptive`, `data/cache`, `runtime/lifecycle`, `platform/device`, and `platform/configuration` remain logical capabilities rather than automatic module requirements. Create another module only when it adds real dependency, ownership, reuse, testability, or build value.

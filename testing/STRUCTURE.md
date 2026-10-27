@@ -2,7 +2,7 @@
 
 **Role:** reusable test-only rules and fakes shared across modules.
 
-**Owns:** dispatcher rules/providers and observability fakes.
+**Owns:** `MainDispatcherRule`, `FakeDispatcherProvider`, `FakeScheduler`, `InMemoryPreferencesDataSource` and observability fakes (see `README.md` for wiring).
 
 ## AI guidance
 

@@ -2,7 +2,7 @@
 
 **Role:** generic DataStore Preferences boundary.
 
-**Owns:** `PreferencesDataSource` and `DataStorePreferencesDataSource`.
+**Owns:** `PreferencesDataSource`, `DataStorePreferencesDataSource`, `PreferenceKey` and `PreferencesMigration`.
 
 ## AI guidance
 
