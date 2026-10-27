@@ -18,6 +18,19 @@ import kotlin.time.Duration.Companion.seconds
  * Delay grows exponentially from [initialDelay] by [factor], capped at [maxDelay], with up to
  * ±[jitter] randomization so many callers retrying the same failure don't all wake on one tick
  * (thundering herd). [CancellationException] is never retried regardless of [retryIf].
+ *
+ * Semantics (MP:CON-03):
+ * - [maxAttempts] counts total executions including the first (3 = one try + two retries).
+ * - The delay before retry `n` (zero-based) is `min(initialDelay * factor^n, maxDelay)`, then
+ *   jittered by `1 +/- jitter`; the cap applies *before* jitter, so a delay can reach
+ *   `maxDelay * (1 + jitter)`.
+ * - Cancellation (including `TimeoutCancellationException` thrown inside the block, which is a
+ *   [CancellationException]) is rethrown immediately, and the backoff `delay` is itself cancellable.
+ * - When attempts are exhausted or [retryIf] declines, the *last* failure is rethrown unchanged.
+ * - The [Flow] variant re-collects upstream from the start, so values emitted before a failure are
+ *   emitted again on the next attempt.
+ * - This is the in-process, per-call policy. Persisted WorkManager retries use `DcRetryPolicy` in
+ *   `:runtime:scheduling`; do not nest the two around the same operation.
  */
 data class RetryPolicy(
     val maxAttempts: Int = 3,
@@ -46,11 +59,12 @@ data class RetryPolicy(
     internal fun shouldRetry(cause: Throwable, attempt: Int): Boolean =
         cause !is CancellationException && attempt < maxAttempts - 1 && retryIf(cause)
 
-    internal fun delayFor(attempt: Int): Duration {
+    /** [random] is injectable so tests can pin jitter without real randomness (MP:CON-03). */
+    internal fun delayFor(attempt: Int, random: Random = Random.Default): Duration {
         val exponential = initialDelay * factor.pow(attempt)
         val capped = if (exponential > maxDelay) maxDelay else exponential
         if (jitter == 0.0) return capped
-        val jittered = 1.0 + Random.nextDouble(-jitter, jitter)
+        val jittered = 1.0 + random.nextDouble(-jitter, jitter)
         return capped * jittered
     }
 }

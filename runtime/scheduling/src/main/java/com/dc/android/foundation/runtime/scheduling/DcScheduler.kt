@@ -87,6 +87,15 @@ sealed interface DcScheduledItem {
     data class Alarm(val alarm: DcAlarm) : DcScheduledItem { override val id: String = alarm.id }
 }
 
+/**
+ * Single scheduling facade. Contract (MP:SCH-01/03):
+ * - `id` is the identity for both engines: for work it must equal `DcJobSpec.name` (else `Rejected`);
+ *   for alarms it keys the persisted [DcAlarm].
+ * - Scheduling is idempotent per id: `After` and `Every` use KEEP (while an earlier request is
+ *   unfinished the later one is ignored but still reports `Scheduled`; a changed interval or
+ *   constraint is not applied), and an alarm with an existing id is replaced.
+ * - `cancel(id)` removes both the unique work and the alarm with that id.
+ */
 interface DcScheduler {
     suspend fun schedule(id: String, trigger: DcTrigger, request: DcScheduleRequest): DcScheduleOutcome
     suspend fun cancel(id: String)
@@ -126,6 +135,7 @@ class AndroidDcScheduler(
         is DcTrigger.After -> {
             val work = request as? DcScheduleRequest.Work
                 ?: return DcScheduleOutcome.Rejected("An After trigger requires a work request.")
+            work.spec.identityMismatch(id)?.let { return DcScheduleOutcome.Rejected(it) }
             runCatching {
                 workScheduler.enqueueOnce(work.spec.copyInitialDelay(trigger.delay))
             }.fold(
@@ -136,6 +146,7 @@ class AndroidDcScheduler(
         is DcTrigger.Every -> {
             val work = request as? DcScheduleRequest.Work
                 ?: return DcScheduleOutcome.Rejected("An Every trigger requires a work request.")
+            work.spec.identityMismatch(id)?.let { return DcScheduleOutcome.Rejected(it) }
             runCatching {
                 workScheduler.enqueuePeriodic(work.spec, trigger.interval, trigger.flex)
             }.fold(
@@ -154,6 +165,14 @@ class AndroidDcScheduler(
 
     override fun observe(id: String): Flow<DcJobState> = workScheduler.observe(id)
 }
+
+/**
+ * Work is addressed by its unique name ([DcJobSpec.name]) in WorkManager, while the facade's
+ * `cancel(id)` and `observe(id)` use [id] as that name. A mismatch would make cancel/observe miss
+ * the job, so it is rejected up front (MP:SCH-01). Alarms are keyed by [id] alone.
+ */
+internal fun DcJobSpec<*>.identityMismatch(id: String): String? =
+    if (name == id) null else "Work id \"$id\" must equal DcJobSpec.name \"$name\"."
 
 @Suppress("UNCHECKED_CAST")
 private fun DcJobSpec<*>.copyInitialDelay(delay: Duration): DcJobSpec<Any> = DcJobSpec(

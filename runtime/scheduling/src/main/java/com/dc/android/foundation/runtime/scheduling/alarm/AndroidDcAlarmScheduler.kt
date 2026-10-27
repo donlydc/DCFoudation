@@ -52,18 +52,10 @@ class AndroidDcAlarmScheduler(
         val now = clock.instant()
         store.all().forEach { alarm ->
             if (alarm.exactness != DcExactness.Inexact && !DcExactAlarmPermission.canScheduleExact(context)) return@forEach
-            val scheduled = when (val trigger = alarm.trigger) {
-                is com.dc.android.foundation.runtime.scheduling.DcTrigger.ExactAt -> {
-                    if (trigger.instant > now) trigger.instant
-                    else if (alarm.missedPolicy == DcMissedPolicy.FireOnce) now
-                    else {
-                        store.remove(alarm.id)
-                        return@forEach
-                    }
-                }
-                else -> alarm.nextOccurrence(now)
+            when (val decision = alarm.restoreDecision(now)) {
+                is DcRestoreDecision.Schedule -> scheduleAt(alarm, decision.at)
+                DcRestoreDecision.Drop -> store.remove(alarm.id)
             }
-            scheduleAt(alarm, scheduled)
         }
     }
 

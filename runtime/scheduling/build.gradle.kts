@@ -9,7 +9,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":foundation"))
+    // AppError is part of the public surface (DcJobState.Failed, DcJobResult.Failure).
+    api(project(":foundation"))
     implementation(project(":runtime:concurrency"))
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.kotlinx.coroutines.core)

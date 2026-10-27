@@ -57,15 +57,12 @@ abstract class DcWorker<I : Any>(
         return json.decodeFromString(inputSerializer as KSerializer<I>, raw)
     }
 
-    private fun DcJobResult.toWorkResult(attempt: Int, maxAttempts: Int): Result = when (this) {
-        DcJobResult.Success -> Result.success()
-        DcJobResult.Retry -> if (!DcRetryPolicy(maxAttempts = maxAttempts).canRetry(attempt)) {
-            Result.failure(workDataOf(ERROR_KIND_KEY to "retry_exhausted"))
-        } else {
-            Result.retry()
+    private fun DcJobResult.toWorkResult(attempt: Int, maxAttempts: Int): Result =
+        when (val verdict = toVerdict(attempt, maxAttempts)) {
+            DcWorkVerdict.Success -> Result.success()
+            DcWorkVerdict.Retry -> Result.retry()
+            is DcWorkVerdict.Failed -> Result.failure(workDataOf(ERROR_KIND_KEY to verdict.kind))
         }
-        is DcJobResult.Failure -> Result.failure(workDataOf(ERROR_KIND_KEY to error.kind()))
-    }
 
     internal companion object {
         const val INPUT_KEY = "dc_scheduling_input"
@@ -73,18 +70,47 @@ abstract class DcWorker<I : Any>(
         const val PROGRESS_KEY = "dc_scheduling_progress"
         const val ERROR_KIND_KEY = "dc_scheduling_error_kind"
 
-        fun appErrorFrom(data: Data): AppError? = when (data.getString(ERROR_KIND_KEY)) {
-            "connectivity" -> AppError.Connectivity()
-            "http" -> AppError.Http(code = 0)
-            "serialization" -> AppError.Serialization()
-            "storage" -> AppError.Storage()
-            "unknown", "retry_exhausted" -> AppError.Unknown()
-            else -> null
-        }
+        fun appErrorFrom(data: Data): AppError? = errorFromKind(data.getString(ERROR_KIND_KEY))
     }
 }
 
-private fun AppError.kind(): String = when (this) {
+/**
+ * Framework-free outcome of one worker run: what [DcWorker.doWork] will tell WorkManager. Kept
+ * separate from `ListenableWorker.Result` so the retry-ceiling and error-kind policy is plain
+ * JVM-testable logic (MP:SCH-01).
+ */
+internal sealed interface DcWorkVerdict {
+    data object Success : DcWorkVerdict
+    data object Retry : DcWorkVerdict
+    data class Failed(val kind: String) : DcWorkVerdict
+}
+
+/** `attempt` is one-based (`runAttemptCount + 1`); a retry past [maxAttempts] becomes a terminal failure. */
+internal fun DcJobResult.toVerdict(attempt: Int, maxAttempts: Int): DcWorkVerdict = when (this) {
+    DcJobResult.Success -> DcWorkVerdict.Success
+    DcJobResult.Retry ->
+        if (DcRetryPolicy(maxAttempts = maxAttempts).canRetry(attempt)) DcWorkVerdict.Retry
+        else DcWorkVerdict.Failed(KIND_RETRY_EXHAUSTED)
+    is DcJobResult.Failure -> DcWorkVerdict.Failed(error.workKind())
+}
+
+internal const val KIND_RETRY_EXHAUSTED = "retry_exhausted"
+
+/**
+ * Inverse of [workKind]. Deliberately lossy: only the variant crosses WorkManager output data, so
+ * `Http` restores with `code = 0` and no `cause`/`serverMessage` (never persist server text).
+ */
+internal fun errorFromKind(kind: String?): AppError? = when (kind) {
+    "connectivity" -> AppError.Connectivity()
+    "http" -> AppError.Http(code = 0)
+    "serialization" -> AppError.Serialization()
+    "storage" -> AppError.Storage()
+    "unknown", KIND_RETRY_EXHAUSTED -> AppError.Unknown()
+    else -> null
+}
+
+/** Exhaustive over [AppError]: a new variant must be given a kind here and in [errorFromKind]. */
+internal fun AppError.workKind(): String = when (this) {
     is AppError.Connectivity -> "connectivity"
     is AppError.Http -> "http"
     is AppError.Serialization -> "serialization"

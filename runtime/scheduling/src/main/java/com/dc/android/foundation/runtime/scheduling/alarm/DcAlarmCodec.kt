@@ -31,8 +31,15 @@ internal object DcAlarmCodec {
         JsonArray(alarms.map { alarm -> alarm.toJson() }),
     )
 
+    /**
+     * Decodes entry by entry: a corrupt or stale entry (receiver class removed, unknown zone or
+     * enum name, wrong JSON shape) is dropped on its own. Failing the whole list would make the
+     * next store write overwrite every other persisted alarm.
+     */
     fun decodeList(json: Json, raw: String): List<DcAlarm> = runCatching {
-        json.parseToJsonElement(raw).jsonArray.mapNotNull { element -> element.jsonObject.toAlarm() }
+        json.parseToJsonElement(raw).jsonArray.mapNotNull { element ->
+            runCatching { element.jsonObject.toAlarm() }.getOrNull()
+        }
     }.getOrDefault(emptyList())
 
     private fun String.toJsonObject(json: Json): JsonObject? = json.parseToJsonElement(this).jsonObject

@@ -1,6 +1,7 @@
 package com.dc.android.foundation.runtime.concurrency
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,7 +32,8 @@ fun <T> Flow<T>.stateInWhileSubscribed(
  * submit button where the first tap should win and the rest should be ignored outright.
  *
  * Timed via [delay] (not a wall-clock [kotlin.time.TimeSource]) so the window respects whichever
- * dispatcher this flow runs on — including a `runTest` virtual-time scheduler in tests.
+ * dispatcher this flow runs on — including a `runTest` virtual-time scheduler in tests. The
+ * returned flow completes as soon as the upstream completes (it does not wait out the last window).
  */
 fun <T> Flow<T>.throttleFirst(window: Duration): Flow<T> = channelFlow {
     var windowOpen = true
@@ -45,4 +47,6 @@ fun <T> Flow<T>.throttleFirst(window: Duration): Flow<T> = channelFlow {
             }
         }
     }
+    // Upstream is done: a pending window timer must not delay completion by up to [window].
+    coroutineContext.cancelChildren()
 }

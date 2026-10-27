@@ -11,6 +11,17 @@ private object DefaultKey
  * Named jobs scoped to one [CoroutineScope] (typically `viewModelScope`) — replaces hand-rolled
  * `Job?` bookkeeping at each call site for two recurring UDF bugs: a stale result from a
  * superseded search/filter request, and duplicate work from a double-tapped refresh button.
+ *
+ * Lifecycle contract (MP:CON-02):
+ * - An entry exists from registration until its job completes for any reason (success, failure,
+ *   cancellation, or cancellation of [scope]); it is removed only if it is still the registered job
+ *   for its key, so a late-finishing predecessor never evicts its successor.
+ * - There is no `close()`: cancelling the owning [scope] (e.g. `viewModelScope`) is the shutdown,
+ *   and leaves no registered entries behind. [cancelAll] stops the work but keeps the scope usable.
+ * - Failures of a job follow [scope] semantics; use a scope with a `SupervisorJob` (as
+ *   `viewModelScope` has) if one key's failure must not cancel the others.
+ * - [isRunning] reports `isActive`, so it is `false` in the instant between registration and start;
+ *   [launchIfIdle] treats mere presence as busy and is not affected by that window.
  */
 class JobRegistry(private val scope: CoroutineScope) {
 

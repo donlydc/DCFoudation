@@ -12,6 +12,7 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.dc.android.foundation.core.AppError
 import com.dc.android.foundation.runtime.scheduling.work.DcWorker.Companion.ERROR_KIND_KEY
 import com.dc.android.foundation.runtime.scheduling.work.DcWorker.Companion.INPUT_KEY
 import com.dc.android.foundation.runtime.scheduling.work.DcWorker.Companion.MAX_ATTEMPTS_KEY
@@ -50,18 +51,18 @@ class AndroidDcWorkScheduler(
             .setInputData(spec.inputData(json))
             .setInitialDelay(spec.initialDelay.inWholeMilliseconds, TimeUnit.MILLISECONDS)
             .setBackoffCriteria(
-                if (spec.retry.exponential) BackoffPolicy.EXPONENTIAL else BackoffPolicy.LINEAR,
+                spec.retry.backoffPolicy(),
                 spec.retry.initialBackoff.inWholeMilliseconds,
                 TimeUnit.MILLISECONDS,
             )
             .apply {
-                spec.tags.plus(spec.name).forEach(::addTag)
+                spec.allTags().forEach(::addTag)
                 if (spec.expedited) setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             }
             .build()
         workManager.enqueueUniqueWork(
             spec.name,
-            if (replaceExisting) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
+            existingWorkPolicy(replaceExisting),
             request,
         )
     }
@@ -88,15 +89,15 @@ class AndroidDcWorkScheduler(
             .setConstraints(spec.constraints.toAndroid())
             .setInputData(spec.inputData(json))
             .setBackoffCriteria(
-                if (spec.retry.exponential) BackoffPolicy.EXPONENTIAL else BackoffPolicy.LINEAR,
+                spec.retry.backoffPolicy(),
                 spec.retry.initialBackoff.inWholeMilliseconds,
                 TimeUnit.MILLISECONDS,
             )
-            .apply { spec.tags.plus(spec.name).forEach(::addTag) }
+            .apply { spec.allTags().forEach(::addTag) }
             .build()
         workManager.enqueueUniquePeriodicWork(
             spec.name,
-            if (keepExisting) ExistingPeriodicWorkPolicy.KEEP else ExistingPeriodicWorkPolicy.UPDATE,
+            existingPeriodicWorkPolicy(keepExisting),
             request,
         )
     }
@@ -125,13 +126,7 @@ fun validatePeriodicInterval(every: Duration, flex: Duration? = null) {
 }
 
 private fun DcConstraints.toAndroid(): Constraints = Constraints.Builder()
-    .setRequiredNetworkType(
-        when (network) {
-            NetworkRequirement.None -> NetworkType.NOT_REQUIRED
-            NetworkRequirement.Connected -> NetworkType.CONNECTED
-            NetworkRequirement.Unmetered -> NetworkType.UNMETERED
-        },
-    )
+    .setRequiredNetworkType(network.toNetworkType())
     .setRequiresCharging(requiresCharging)
     .setRequiresBatteryNotLow(requiresBatteryNotLow)
     .setRequiresStorageNotLow(requiresStorageNotLow)
@@ -146,10 +141,44 @@ private fun DcJobSpec<*>.inputData(json: Json) = workDataOf(
     },
 )
 
-private fun WorkInfo.toDcState(): DcJobState = when (state) {
+private fun WorkInfo.toDcState(): DcJobState = dcJobState(
+    state = state,
+    progress = progress.getFloat(PROGRESS_KEY, Float.NaN).takeUnless(Float::isNaN),
+    failure = { DcWorker.appErrorFrom(outputData) },
+)
+
+/** Pure WorkInfo-state mapping; [failure] is only evaluated for `FAILED`. */
+internal fun dcJobState(
+    state: WorkInfo.State,
+    progress: Float?,
+    failure: () -> AppError?,
+): DcJobState = when (state) {
     WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> DcJobState.Enqueued
-    WorkInfo.State.RUNNING -> DcJobState.Running(progress.getFloat(PROGRESS_KEY, Float.NaN).takeUnless(Float::isNaN))
+    WorkInfo.State.RUNNING -> DcJobState.Running(progress)
     WorkInfo.State.SUCCEEDED -> DcJobState.Succeeded
-    WorkInfo.State.FAILED -> DcJobState.Failed(DcWorker.appErrorFrom(outputData))
+    WorkInfo.State.FAILED -> DcJobState.Failed(failure())
     WorkInfo.State.CANCELLED -> DcJobState.Cancelled
 }
+
+/**
+ * Idempotency policy for one-time work (MP:SCH-01): KEEP means a second enqueue of the same unique
+ * name is a no-op while the first is unfinished; only an explicit replace cancels and restarts it.
+ */
+internal fun existingWorkPolicy(replaceExisting: Boolean): ExistingWorkPolicy =
+    if (replaceExisting) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
+
+/** KEEP preserves the already-registered periodic request (its old interval/constraints stay in force). */
+internal fun existingPeriodicWorkPolicy(keepExisting: Boolean): ExistingPeriodicWorkPolicy =
+    if (keepExisting) ExistingPeriodicWorkPolicy.KEEP else ExistingPeriodicWorkPolicy.UPDATE
+
+internal fun DcRetryPolicy.backoffPolicy(): BackoffPolicy =
+    if (exponential) BackoffPolicy.EXPONENTIAL else BackoffPolicy.LINEAR
+
+internal fun NetworkRequirement.toNetworkType(): NetworkType = when (this) {
+    NetworkRequirement.None -> NetworkType.NOT_REQUIRED
+    NetworkRequirement.Connected -> NetworkType.CONNECTED
+    NetworkRequirement.Unmetered -> NetworkType.UNMETERED
+}
+
+/** The caller's tags plus the unique name, so `cancelByTag(name)` also reaches the job. */
+internal fun DcJobSpec<*>.allTags(): Set<String> = tags + name
