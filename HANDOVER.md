@@ -42,10 +42,11 @@ Network blockers: `dl.google.com`/`maven.google.com`, `api.foojay.io`, GitHub re
 | ID | Status | Note |
 |---|---|---|
 | KD-01 | Resolved (audit trail) | Namespace is `com.dc.android.foundation`. |
-| KD-02 | Open | No automated boundary enforcement (exit: R2.1). Evidence refreshed to the 13-module layout 2026-10-27; `:app:dependencies` NOT_RUN. |
+| KD-02 | Open (partially mitigated) | Static checker `tools/check_architecture.py --boundaries-only` + blocking CI job `architecture` added by lane A1 (checker run locally: PASS; CI run NOT_RUN). Exit: one real CI run with evidence, optional Gradle-graph check. `:app:dependencies` NOT_RUN. |
 | KD-03 | Active | `android.disallowKotlinSourceSets=false` until KSP is AGP-9-native. |
 | KD-04 | Open | Secure storage exists with no real credential flowing through it. |
 | KD-05 | Open | Analytics/crash use local logging backends; no vendor chosen. |
+| KD-06 | Open | Design-system catalog and trip showcase are gated by a runtime `BuildConfig.DEBUG` check in main source sets, so they ship in release (DEC-05 says debug-only). Added by R1.5. |
 
 R0.3 reopened KD-02 (module boundaries exist but are not automatically enforced); no other KD changed status. There is no new build evidence.
 
@@ -84,3 +85,22 @@ Executed 2026-08-16 under `plan/CLAUDE_IMPLEMENTATION_PLAN.md`; detail in `PLAN_
 | L Final validation & sanitized ZIP | done (ZIP is git-ignored under `deliverables/`) | not recorded |
 
 Later work (scheduling, network, database, navigation, permission, security, observability, testing, `articles`, DEC-05..DEC-08) is recorded in `architecture/23-decision-log.md` and `IMPLEMENTATION_STATUS.md`; it has no current build verification.
+
+## 8. Follow-ups from the R1 docs audit (mapped to target phase)
+
+Source: `reports/wp/R1.0..R1.5.md`, `*.review.md`. Observations only; none is fixed here, none has a KD because no documented rule or decision is contradicted (except KD-06). Verify against source/build before acting. Backlog items are `MP:<ID>` (DEC-09).
+
+| # | Follow-up | Evidence | Target |
+|---|---|---|---|
+| F1 | `AndroidManifest.xml` declares no `INTERNET` permission while `articles` performs network calls; the refresh may always fail to the stale path. Merged manifest not inspected (build NOT_RUN). No architecture rule covers manifest permissions, so no KD. | `app/src/main/AndroidManifest.xml:6` (only `POST_NOTIFICATIONS`); `reports/wp/R1.2.md` D5 | R5.1 (MP:NET-05 articles sample); check the merged manifest first once R0.2 yields a build |
+| F2 | `:runtime:scheduling` exposes `AppError` in public types (`DcJobState.Failed`, `DcJobResult.Failure`) but declares `:foundation` as `implementation`; consumers must add `:foundation` themselves. No rule on `api` vs `implementation` exposure exists. Decide `api(project(":foundation"))` or document. | `runtime/scheduling/build.gradle.kts`; `DcJobState.kt:9`; `DcWorker.kt:17`; `reports/wp/R1.1a.md` D3 | R2.1 (edge policy) then R3.3 |
+| F3 | Edge `:data:network -> :observability` is declared but nothing under `data/network/src` imports it (only a KDoc mention in `NetworkClientConfig.kt:7`). | `data/network/build.gradle.kts:13`; `reports/wp/R1.1b.md` D1, R1.1c D4 | R2.1 |
+| F4 | `:platform:permission` applies `dc.compose` and `androidx.activity.compose` but its two sources import no Compose; intent UNKNOWN. | `platform/permission/build.gradle.kts`; `reports/wp/R1.1c.md` D5 | R2.1; R6.1 if MP:PERM-02 needs them |
+| F5 | `ArticlesViewModel` injects `SavedStateHandle` and never reads it. | `ArticlesViewModel.kt:36` | R6.2 |
+| F6 | `modules/app.md` section 6 intro says all bindings are `@InstallIn(SingletonComponent)` and `@Singleton`; `GreetingModule` and `ArticlesModule` are unscoped `@Binds`. Reword to "`@Singleton` on the `@Provides` in `di/*`". | `reports/wp/R1.1d-R1.2.review.md` | next architecture-writer pass (R6.2 docs) |
+| F7 | Mermaid blocks in `modules/data-preferences.md` and `modules/data-database.md` use `&lt;`/`&gt;` entities inside fences; Mermaid form is `#lt;`/`#gt;`, so they may render literally. | `reports/wp/R1.1b.review.md` | R2.3 (docs-check) or next doc pass |
+| F8 | Hard-coded English strings in `ArticlesScreen.kt` (lines 40, 45, 54, 61) and showcase screens; legacy `DcSnackbarEffect(String?, SnackbarHostState)` still public next to the DEC-08 typed overload; `GreetingRoute` KDoc "only destination" is outdated. | `reports/wp/R1.1d.md`, `R1.2.md` D7, D8 | R4.3 (DS), R6.2 (app) |
+| F9 | `app/src/main/res/xml/backup_rules.xml` and `data_extraction_rules.xml` are Android defaults with `allowBackup=true`; backup coverage of DataStore, Room and secure prefs is UNKNOWN. `ArticlesRepository` sends raw `AppError.cause` to `CrashReporter` while the `AppError` KDoc says never log raw cause. | `reports/wp/R1.1b.md` D7; `R1.4.md` cross-cutting 5 | R5.2 |
+| F10 | Unused public APIs (`SingleFlight`, `JobRegistry`, `RetryPolicy`, Flow helpers, `FakeScheduler`, `TransactionRunner`, `StalenessPolicy`) have no production consumer. | `reports/wp/R1.1a.md` D2, D6; `R1.1b.md` D2 | R3.2, R3.3, R5.3 |
+| F11 | `tools/check_architecture.py` hardening (non-blocking review items: strip `/* */`, multi-arg `include`, WARN on `projects.` accessors, return 2 on malformed YAML, tests for entry-symbol/TESTED/link checks). `plan/AGENT_EXECUTION_PLAN.md` and the master plan still use bare backlog IDs (DEC-09). | `reports/wp/R1.3.review.md` | R2.1 / R2.3; plan edit by the main session |
+

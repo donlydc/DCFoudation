@@ -1,5 +1,9 @@
 # Skills đang dùng
 
+## Architecture-as-Context (bước đầu tiên sau khi đọc `CLAUDE.md`)
+
+- Đọc `architecture/context-protocol.md`, rồi tra tác vụ trong `architecture/context-map.yaml` (trang module/feature, `entry_symbols`, `owners_rules`) trước khi tìm mã. Quy ước ID: ID trần (`PERM-01`) là quy tắc kiến trúc, mục backlog của master plan viết `MP:<ID>`. Sau đó vẫn áp dụng quy tắc CodeGraph bên dưới.
+
 ## Graphify
 
 - Dùng `graphify-out/graph.json` làm bản đồ kiến trúc sẵn có trước khi tìm kiếm rộng trong mã nguồn.

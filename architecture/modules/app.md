@@ -26,7 +26,7 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 ## 3. Dependencies and boundaries
 - Allowed (`architecture/dependency-rules.md`, `implementation`): `:foundation`, `:ui:designsystem`, `:runtime:concurrency`, `:runtime:scheduling`, `:data:preferences`, `:data:network`, `:data:database`, `:observability`, `:platform:navigation`, `:platform:permission`, `:security`; test-only `:testing` (BLD-03).
 - Forbidden: reverse edges from any module to `:app` (DEP-01); feature package importing another feature's internals (DEP-02: `greeting`, `articles`, `showcase`, `config`); Composables resolving repositories/DAO/DataStore directly (DEP-03/INV-02); `androidx.navigation.*` in feature code (NAV-01: only `MainActivity` touches it); `BuildConfig.DEBUG` read outside `AppEnvironmentProvider` (CFG-01).
-- Exceptions (DEC/KD): none for edges. Enforcement is manual (KD-02, R2.1). `:foundation` is used by `articles/ArticlesSyncWorker.kt` (`foundation.core.*`).
+- Exceptions (DEC/KD): none for edges. Enforcement: KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN). `:foundation` is used by `articles/ArticlesSyncWorker.kt` (`foundation.core.*`).
 
 ## 4. Data/control flow
 ```mermaid
@@ -72,7 +72,7 @@ Library modules are DI-framework-agnostic, so `:app` binds them (08-dependency-i
 - `ARTICLES_BASE_URL` is a public demo endpoint (`jsonplaceholder.typicode.com`); no secrets in `app/` source (not scanned by tool). `SecureStorage` is wired but unused (KD-04).
 - Release build has `optimization.enable=false` and an empty `rules.keep`; debug-only screens are still compiled into release.
 - `ArticlesScreen.kt` hard-codes English "Showing cached data — refresh failed" (not a string resource); drift against DS string convention (DEC-08), feature-level debt.
-- Startup/perf baselines absent (APP-06).
+- Startup/perf baselines absent (MP:APP-06).
 
 ## 8. Tests and evidence
 - Unit (`app/src/test`, 19 `@Test`, never executed): `GreetingViewModelTest`, `ArticlesViewModelTest`, `AppConfigurationRepositoryTest`, `ExampleUnitTest`.
@@ -83,9 +83,9 @@ Library modules are DI-framework-agnostic, so `:app` binds them (08-dependency-i
 - Last verified result: none.
 
 ## 9. Known debt / decisions
-- DEC-07 (appearance persisted in `:app`; locale via AppCompat; `config` stays in `:app` until a second consumer earns `:platform:configuration`), DEC-05 (showcase is `:app` reference code, not DS). KD-02 (no enforced boundaries), KD-04, KD-05 (see section 6).
-- Docs vs source: `07-design-system/README.md` and DEC-05 describe the showcase as debug-only `:app` code; source gates it by runtime `AppEnvironment` in the main source set (`MainActivity.kt`). Recorded in report D.
-- Backlog (PROPOSED, master-plan 4.13): APP-01 verify greeting/articles/config tests (P0); APP-02 run `GreetingScreenTest` on device/emulator (P0); APP-03 navigation + permission journeys; APP-04 missing error/offline/loading/retry/empty flows; APP-05 full catalog showcase; APP-06 startup/screen benchmark baselines.
+- DEC-07 (appearance persisted in `:app`; locale via AppCompat; `config` stays in `:app` until a second consumer earns `:platform:configuration`), DEC-05 (showcase is `:app` reference code, not DS). KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN), KD-04, KD-05 (see section 6).
+- Docs vs source: `07-design-system/README.md` and DEC-05 describe the showcase as debug-only `:app` code; source gates it by runtime `AppEnvironment` in the main source set (`MainActivity.kt`). Recorded as KD-06 in `22-known-deviations.md`.
+- Backlog (PROPOSED, master-plan 4.13): MP:APP-01 verify greeting/articles/config tests (P0); MP:APP-02 run `GreetingScreenTest` on device/emulator (P0); MP:APP-03 navigation + permission journeys; MP:APP-04 missing error/offline/loading/retry/empty flows; MP:APP-05 full catalog showcase; MP:APP-06 startup/screen benchmark baselines.
 
 ## 10. Safe extension guide
 - New feature: create a package with Route/ViewModel/UiState/UiAction/Screen (`20-feature-template.md`, generator plugin `dc.feature.generator`); bind in a feature-local `@Module`; add a destination in `:platform:navigation` and register it in `DcNavHost` (the only nav-aware file).
@@ -103,3 +103,4 @@ Library modules are DI-framework-agnostic, so `:app` binds them (08-dependency-i
 ## 12. Change log and links
 - 2026-10-27 — R1.1d — first DRAFT from source; report `reports/wp/R1.1d.md`.
 - Links: `architecture/context-map.yaml` (`app`; features `greeting`, `articles`, `showcase`), `architecture/dependency-rules.md`, `architecture/modules/ui-designsystem.md`, `architecture/22-known-deviations.md`, `architecture/23-decision-log.md`.
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `DEP-02` (02-layers-and-dependencies.md): a feature does not import another feature's private implementation; `DEP-03` (02-layers-and-dependencies.md): presentation does not import infrastructure implementations; `DI-02` (08-dependency-injection-hilt.md): bindings live next to the interface/impl they wire; `DS-01` (07-design-system/README.md): feature UI themes through DcTheme, not raw tokens; `PERM-01` (13-permissions.md): feature code reads PermissionState, never a raw Android permission API; only the Route touches the real API; `NAV-01` (06-navigation.md): feature code does not depend on the navigation engine; only :app does; `BG-01` (14-background-work.md): select the engine from the required delivery guarantee; `CFG-01` (16-config-feature-flags-environments.md): BuildConfig.DEBUG is read in exactly one place; `BLD-03` (18-build-logic-and-dependencies.md): test utilities never enter production runtime graphs.

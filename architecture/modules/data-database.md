@@ -43,14 +43,14 @@ Refs: `DatabaseModule.kt:22,34`; `ArticlesRepository.kt:37` (observe, mapped to 
 - `ArticleDao`: `observeArticles(): Flow<List<ArticleEntity>>` (`ORDER BY id ASC`, cold, re-emits on table change), `suspend upsertAll(List)` (`REPLACE`), `suspend clear()`.
 - `TransactionRunner.inTransaction(block: suspend () -> T): T` -> `database.withTransaction { block() }`. Commit/rollback/cancellation semantics are Room's `withTransaction`; not tested here.
 - `StalenessPolicy(maxAge: Duration)`: `init` rejects negative `maxAge`; `isStale(lastUpdatedAtMillis: Long?, nowMillis)`: null -> stale; timestamp in the future -> fresh; else stale when age >= `maxAge`. Clock is a parameter (no system clock read inside).
-- Errors: no `AppError` mapping in this module (ERR-01 listed in owners_rules); Room exceptions propagate to the caller. `ArticlesRepository.refresh` does not catch `upsertAll` failures.
+- Errors: no `AppError` mapping in this module (ERR-01 is not an owner rule of this module; Room failures are not mapped); Room exceptions propagate to the caller. `ArticlesRepository.refresh` does not catch `upsertAll` failures.
 
 ## 6. DI, configuration and ownership
 - `:app` `di/DatabaseModule.kt` (`@InstallIn(SingletonComponent)`): `provideDcDatabase` (`@Singleton`, name `dc_foundation_db`, no migrations, no destructive flag) and `provideArticleDao`. No binding exists for `TransactionRunner` or `StalenessPolicy` (no production use).
 - Room compiler/KSP and schema export come from the `dc.room` convention plugin; this module has no Hilt plugin.
 
 ## 7. Edge cases, security and performance
-- DB is created lazily on first DAO use; DB-05 (no module-initialization open, no global DAO singleton) holds today: no static state seen in the module (PROPOSED check still pending).
+- DB is created lazily on first DAO use; MP:DB-05 (no module-initialization open, no global DAO singleton) holds today: no static state seen in the module (PROPOSED check still pending).
 - Version 1 only; no migration exists, so any future `@Database` version bump without a `Migration` fails at open unless the destructive flag is set (flag defaults to false and is not set in `:app`).
 - `ArticleEntity` rows hold article title/body in plaintext SQLite (non-secret sample data); no SEC-01/02 data flows through here.
 - Backup coverage of `dc_foundation_db`: `UNKNOWN` (backup XML files are template files).
@@ -66,7 +66,7 @@ Refs: `DatabaseModule.kt:22,34`; `ArticlesRepository.kt:37` (observe, mapped to 
 
 ## 9. Known debt / decisions
 - D-01 (MP 12.1, OPEN): `DcDatabase` and Article* ownership; ADR planned in R5.0. Moving `Article*` to `:app` must preserve schema version/`1.json` (separate refactor, MP 4.5 note). No DEC/KD file entry exists yet.
-- Backlog (PROPOSED, MP 4.5): DB-01 audit/ownership decision (P0); DB-02 `RoomTransactionRunner` semantics integration tests (P0); DB-03 `StalenessPolicy` fake-clock/boundary tests (P1); DB-04 migration/corruption strategy (P1); DB-05 no global DAO / no auto-open check (P0).
+- Backlog (PROPOSED, MP 4.5): MP:DB-01 audit/ownership decision (P0); MP:DB-02 `RoomTransactionRunner` semantics integration tests (P0); MP:DB-03 `StalenessPolicy` fake-clock/boundary tests (P1); MP:DB-04 migration/corruption strategy (P1); MP:DB-05 no global DAO / no auto-open check (P0).
 - Observation: `TransactionRunner`, `RoomTransactionRunner`, `StalenessPolicy` have no production consumer; DAT-CACHE-01 staleness is not applied by the sample repository.
 
 ## 10. Safe extension guide
@@ -81,4 +81,5 @@ Refs: `DatabaseModule.kt:22,34`; `ArticlesRepository.kt:37` (observe, mapped to 
 
 ## 12. Change log and links
 - 2026-10-27 R1.1b: first DRAFT from source (base 2c0ae05). Report: [`reports/wp/R1.1b.md`](../../reports/wp/R1.1b.md).
-- Links: context-map id `data-database`; rules DAT-ROOM-01, DAT-CACHE-01, ERR-01; [`dependency-rules.md`](../dependency-rules.md).
+- Links: context-map id `data-database`; rules DAT-ROOM-01, DAT-CACHE-01; [`dependency-rules.md`](../dependency-rules.md).
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `INV-07` (01-overview-and-invariants.md): infrastructure exceptions and vendor types do not leak into presentation/public contracts; `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `DEP-04` (02-layers-and-dependencies.md): infrastructure-specific types stay behind the owning module boundary; `ERR-01` (11-error-and-result-model.md): infrastructure exceptions are caught at the data-source boundary, not in the ViewModel; `DAT-ROOM-01` (10-data/persistence-room.md): DAO/entity types do not cross the repository mapping boundary; `DAT-CACHE-01` (10-data/cache-and-offline.md): one repository owns remote/local coordination and stale policy; `SEC-01` (12-security-and-session.md): no secret/token/PII in a log call; `SEC-02` (12-security-and-session.md): credentials/tokens are stored only through SecureStorage, never PreferencesDataSource; `BLD-03` (18-build-logic-and-dependencies.md): test utilities never enter production runtime graphs.

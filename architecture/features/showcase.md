@@ -6,7 +6,7 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 
 ## 1. Identity and scope
 - Package / owning module: `com.dc.android.foundation.showcase.trip` in `:app` (`app/src/main/java/com/dc/android/foundation/showcase/trip/`); the context-map package `...showcase` is the parent of this single `trip` subpackage.
-- Purpose: debug-only demo of common screen patterns (detail summary, record list with filter + status) built from design-system parts. Non-goals: real feature, data source, ViewModel, persistence, navigation destination.
+- Purpose: debug-gated (runtime check, still compiled into release; KD-06) demo of common screen patterns (detail summary, record list with filter + status) built from design-system parts. Non-goals: real feature, data source, ViewModel, persistence, navigation destination.
 - Role: showcase (developer-facing; not a template for stateful features)
 
 ## 2. Presentation contract (UDF — UI-01/UI-02)
@@ -40,7 +40,7 @@ flowchart LR
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 
 ## 8. Known debt / decisions
-- DEC-06 (promote primitives, not domain-shaped screens). DEC-08 (DS widget set / string defaults). KD-02 (boundaries unenforced). Referenced as example code from `07-design-system/common-screen-patterns.md`.
+- DEC-06 (promote primitives, not domain-shaped screens). DEC-08 (DS widget set / string defaults). KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN). Referenced as example code from `07-design-system/common-screen-patterns.md`.
 - Debt: `component-roadmap.md` expects the showcase to prove new widgets; no test pins that.
 
 ## 9. AI playbook
@@ -48,3 +48,4 @@ flowchart LR
 - Read first: `07-design-system/common-screen-patterns.md`, DEC-06, then `TripHistoryShowcaseScreen.kt`. Start query: `codegraph_explore "TripShowcaseHost TripDetailsShowcaseScreen TripHistoryShowcaseScreen TripShowcaseData"`.
 - Change safely: edit only inside the `showcase/trip` package; compose from `Dc*` parts; do not add domain logic or a ViewModel. If a pattern repeats in a real feature, promote the neutral primitive to `:ui:designsystem` per DEC-06 and update the registry/catalog.
 - DoD: debug build compiles, showcase still debug-gated in `MainActivity`, no DI/data imports in the package.
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `DI-02` (08-dependency-injection-hilt.md): bindings live next to the interface/impl they wire; `DI-03` (08-dependency-injection-hilt.md): Compose content does not resolve dependencies itself; `UI-01` (05-presentation-udf.md): state flows down, actions flow up; `UI-02` (05-presentation-udf.md): ViewModel outcomes become state; effects only for immediate UI integration; `UI-03` (05-presentation-udf.md): no universal BaseViewModel; `DS-01` (07-design-system/README.md): feature UI themes through DcTheme, not raw tokens; `DS-03` (07-design-system/README.md): no raw spacing/shape literals in feature UI; `NAV-01` (06-navigation.md): feature code does not depend on the navigation engine; only :app does; `CFG-02` (16-config-feature-flags-environments.md): user configuration has one state owner and a typed mutation API; `TST-01` (17-testing.md): every *ViewModel gets a unit test using MainDispatcherRule; `TST-02` (17-testing.md): stateless screens get a Compose UI test, not a mock-heavy one.

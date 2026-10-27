@@ -27,6 +27,14 @@ Rules of the protocol:
 - Doc status (`DRAFT | VERIFIED | NEEDS_REFRESH`) and test status (`NOT_RUN | TESTED | FAILED | BLOCKED`) are separate fields (legends in `modules/TEMPLATE.md`). Mark a page `VERIFIED` only with a commit SHA and audit date; mark tests `TESTED`/`FAILED` only with an evidence path to logged command output, otherwise `NOT_RUN`.
 - State explicitly in the final report whether CodeGraph was queried and whether the index matches the commit (MP 10.4).
 
+## A2. ID convention (rule IDs vs master-plan backlog)
+
+Rule IDs from `architecture/01..24` and the topical docs (for example `PERM-01`, `NAV-01`, `OBS-01`, `SEC-01`, `TST-01`, `UI-01`, `BLD-01..03`) and the master-plan backlog (`plan/FOUNDATION_MASTER_PLAN.md` section 4) reuse the same prefixes with different meaning. Convention:
+
+- **A bare ID is an architecture rule**: `PERM-01` = `13-permissions.md`; `TST-01` = `17-testing.md`. `owners_rules` in `context-map.yaml` holds bare rule IDs only.
+- **A master-plan backlog item is written `MP:<ID>`**: `MP:PERM-01` = "state machine + notification contract" in MP 4.8; `MP:TST-01` = fake parity in MP 4.11. Applies to every `architecture/modules/*.md` and `architecture/features/*.md` page and to reports, work-package titles and commit messages. `DEC-xx` and `KD-xx` are not affected.
+- A module page that cites a rule ID whose text lives outside `modules/` ends with a one-line "Rule glosses" bullet (gloss only; the rule doc stays authoritative).
+
 ## B. Refresh rules (MP 10.4)
 
 | Change in the PR | Must update |
@@ -40,7 +48,7 @@ Rules of the protocol:
 | New module or feature skeleton | `settings.gradle.kts`, `context-map.yaml` entry, doc page from TEMPLATE; the generator emits the skeleton, AI fills it from source; an empty template is never VERIFIED |
 | Large edits | `codegraph sync`; `graphify update .` only when topology changed and a graph exists |
 
-Keep `context-map.yaml` pointers-only (no copied code). Doc-drift checking is planned as `tools/check_architecture.py` (R1.3): module coverage, links, headings, `entry_symbols`, and no `TESTED` without an evidence path.
+Keep `context-map.yaml` pointers-only (no copied code). Doc-drift checking: `python3 tools/check_architecture.py` (R1.3): module coverage, links, headings, `entry_symbols`, edges vs `dependency-rules.md`, and no `TESTED` without an evidence path.
 
 ## C. Handoff report convention
 

@@ -49,7 +49,7 @@ Refs: `observe` `DataStorePreferencesDataSource.kt:38`; `edit` `:64`; `ensureMig
 - This module has no Hilt dependency; one DataStore per file is enforced by the single `@Singleton` provider (ownership in `:app`, not in this module).
 
 ## 7. Edge cases, security and performance
-- Nothing prevents a caller from storing a secret under a `PreferenceKey`; SEC-02 forbids it by convention only (PREF-03, PROPOSED review). Data is plaintext in the DataStore file.
+- Nothing prevents a caller from storing a secret under a `PreferenceKey`; SEC-02 forbids it by convention only (MP:PREF-03, PROPOSED review). Data is plaintext in the DataStore file.
 - Whether `dc_foundation_prefs` is included in Android backup: `UNKNOWN` (`app/src/main/res/xml/backup_rules.xml`, `data_extraction_rules.xml` are template/sample files; effective policy not verified).
 - Corruption policy beyond `IOException` -> default: not defined in code. A corrupt value silently becomes the default (no log/metric).
 - Cost: each `observe` collection re-reads the `Preferences` snapshot and maps one key; first call pays the migration check (one `dataStore.data.first()`).
@@ -63,7 +63,7 @@ Refs: `observe` `DataStorePreferencesDataSource.kt:38`; `edit` `:64`; `ensureMig
 - Not covered by any test seen: concurrent writers, restart persistence, JSON/Long/Float/StringSet round trip, migration idempotency across restart, `clear`/`remove`.
 
 ## 9. Known debt / decisions
-- No KD or DEC specific to this module. Backlog (PROPOSED, from MP 4.4): PREF-01 contract + flow/restart/concurrent-write UT (P0); PREF-02 migration tests and recovery policy (P1); PREF-03 config-vs-secret separation review (P0); PREF-04 sample wiring/lifecycle ownership consumer test (P0).
+- No KD or DEC specific to this module. Backlog (PROPOSED, from MP 4.4): MP:PREF-01 contract + flow/restart/concurrent-write UT (P0); MP:PREF-02 migration tests and recovery policy (P1); MP:PREF-03 config-vs-secret separation review (P0); MP:PREF-04 sample wiring/lifecycle ownership consumer test (P0).
 - Observation (not a KD): no `PreferencesMigration` implementation exists in the repo and none is wired in `DataStoreModule`; migration code path is only exercised by the unit test.
 
 ## 10. Safe extension guide
@@ -80,3 +80,4 @@ Refs: `observe` `DataStorePreferencesDataSource.kt:38`; `edit` `:64`; `ensureMig
 ## 12. Change log and links
 - 2026-10-27 R1.1b: first DRAFT from source (base 2c0ae05). Report: [`reports/wp/R1.1b.md`](../../reports/wp/R1.1b.md).
 - Links: context-map id `data-preferences`; rules DAT-01, ERR-01, INV-05, SEC-02; [`dependency-rules.md`](../dependency-rules.md).
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `INV-05` (01-overview-and-invariants.md): no locks held while invoking external callbacks or across unsafe suspension points; `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `DEP-03` (02-layers-and-dependencies.md): presentation does not import infrastructure implementations; `DEP-04` (02-layers-and-dependencies.md): infrastructure-specific types stay behind the owning module boundary; `ERR-01` (11-error-and-result-model.md): infrastructure exceptions are caught at the data-source boundary, not in the ViewModel; `DAT-01` (10-data/preferences-datastore.md): features map the generic preferences API onto their own vocabulary; `SEC-02` (12-security-and-session.md): credentials/tokens are stored only through SecureStorage, never PreferencesDataSource; `BLD-03` (18-build-logic-and-dependencies.md): test utilities never enter production runtime graphs.

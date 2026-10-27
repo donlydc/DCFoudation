@@ -10,6 +10,7 @@ Minimize token usage and reduce accidental cross-domain assumptions by loading o
 
 - `00-index.md`
 - `01-overview-and-invariants.md`
+- `context-protocol.md` and `context-map.yaml`: after `CLAUDE.md`, find the module/feature entry and open its page under `modules/` or `features/` before the topic route below.
 
 Then choose the narrowest route below. If the target document doesn't exist yet, check `00-index.md`'s status table and `../PLAN_REPORT.md` before assuming it's missing by mistake — it likely just belongs to a phase that hasn't run.
 
@@ -35,7 +36,7 @@ Then choose the narrowest route below. If the target document doesn't exist yet,
 ## Search-before-read protocol
 
 1. Classify the task using the table.
-2. Use `rg`/`git grep`/`Glob` — or `graphify query "<question>"` if `graphify-out/graph.json` exists and the question is broad/exploratory — to identify likely implementation files. Prefer exact `rg` lookups when the target file/symbol is already known; use graphify for "how does X relate to Y" style questions.
+2. CodeGraph first (CLAUDE.md section 3a, `context-protocol.md` step 5): `codegraph_explore` with the `entry_symbols` from `context-map.yaml` or a natural-language question (shell fallback `codegraph explore "<symbols>"`). Then, if `graphify-out/graph.json` exists and the question is broad ("how does X relate to Y"), `graphify query "<question>"`. Only then `rg`/`git grep`/`Glob`, and for non-code files (docs, Gradle, XML) or when CodeGraph returns nothing relevant.
 3. Read only relevant architecture docs.
 4. Read target source and immediate dependencies.
 5. Expand context only when evidence shows a cross-cutting impact.

@@ -64,7 +64,7 @@ flowchart LR
 - Last verified result:
 
 ## 9. Known debt / decisions
-<!-- Link KD-xx (22-known-deviations.md) and DEC-xx (23-decision-log.md); no free-form debt. -->
+<!-- Link KD-xx (22-known-deviations.md) and DEC-xx (23-decision-log.md); no free-form debt. Master-plan backlog items are written `MP:<ID>` (for example `MP:PERM-01`); a bare ID is an architecture rule (context-protocol.md, ID convention). -->
 
 ## 10. Safe extension guide
 <!-- How another module/feature may reuse or extend this safely; name a real sample consumer. -->

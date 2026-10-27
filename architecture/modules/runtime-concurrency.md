@@ -22,7 +22,7 @@ Legends for `Status:` / `Test status:` and per-fact tags: [`TEMPLATE.md`](TEMPLA
 ## 3. Dependencies and boundaries
 - Allowed: none (`:runtime:concurrency -> (none)` in [`dependency-rules.md`](../dependency-rules.md)); inbound from `:app`, `:runtime:scheduling`, `:data:database`, `:security`, `:testing`.
 - Forbidden: edge to `:app` (DEP-01); `GlobalScope` (THR-01); PROPOSED (no rule ID): no Android module dependency, based on the `dc.kotlin.jvm` build fact.
-- Exceptions (DEC/KD): none recorded. KD-02 (edges unenforced): [`22-known-deviations.md`](../22-known-deviations.md).
+- Exceptions (DEC/KD): none recorded. KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN): [`22-known-deviations.md`](../22-known-deviations.md).
 
 ## 4. Data/control flow
 ```mermaid
@@ -57,21 +57,21 @@ Presets: `RetryPolicy.None`, `.Default`, `.Background` (5 attempts, 60 s cap). `
 
 ## 7. Edge cases, security and performance
 - Scopes bypassing the provider: `DcAlarmReceiver` and `DcAlarmRestorer` (`:runtime:scheduling`) build their own `CoroutineScope(SupervisorJob() + DefaultDispatcherProvider().default)`; not fakeable in tests.
-- `SingleFlight`: failure cleanup depends on `invokeOnCompletion`; whether a failing `block` also cancels `scope` depends on the Job type of the scope passed in (not enforced, not tested; CON-01). Different value types per key are not checked.
-- `RetryPolicy.retryIf` default only retries `java.io.IOException`; jitter uses `Random` (not injectable, CON-03).
+- `SingleFlight`: failure cleanup depends on `invokeOnCompletion`; whether a failing `block` also cancels `scope` depends on the Job type of the scope passed in (not enforced, not tested; MP:CON-01). Different value types per key are not checked.
+- `RetryPolicy.retryIf` default only retries `java.io.IOException`; jitter uses `Random` (not injectable, MP:CON-03).
 - No secrets/PII handled. `JobRegistry` uses `synchronized`, no suspending locks; no blocking work inside.
-- `AppCoroutineScope` has no `cancel`/shutdown contract (CON-07).
+- `AppCoroutineScope` has no `cancel`/shutdown contract (MP:CON-07).
 
 ## 8. Tests and evidence
 - Unit (JVM, `runTest`/`runBlocking`): `SingleFlightTest` (4 tests: immediate-execution cleanup, key collapse, different keys, one caller cancels), `JobRegistryTest` (6: concurrent `launchIfIdle`, `launchLatest`, keys, idle/finished re-launch, `cancel`), `RetryPolicyTest` (6: success, exponential virtual delay, exhaustion, ineligible, cancellation, Flow), `FlowSharingTest` (1: `throttleFirst`). No test for `stateInWhileSubscribed`, `AppCoroutineScope`, `DispatcherShortcuts`, `cancelAll`, `isRunning`.
 - Integration / Instrumented: none.
-- Commands: `./gradlew :runtime:concurrency:test` (JVM module; CI's `testDebugUnitTest` does not cover it, baseline drift D2).
+- Commands: `./gradlew :runtime:concurrency:test` (JVM module; `testDebugUnitTest` does not cover it, baseline drift D2; lane A1 added an explicit `:foundation:test :runtime:concurrency:test` step to `ci.yml`, run NOT_RUN).
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md, Part B: Gradle blocked at daemon-toolchain provisioning)
 - Last verified result: none for the current HEAD.
 
 ## 9. Known debt / decisions
-- KD-02 only. Backlog, all PROPOSED (MP 4.2): CON-01 `SingleFlight` audit incl. race tests (P0); CON-02 `JobRegistry` lifecycle/no orphan (P0); CON-03 `RetryPolicy` virtual clock, injectable jitter (P0); CON-04 `FlowSharing` semantics (P0); CON-05 debounce/throttle only if no equivalent (P1); CON-06 optional `ClockProvider` (P1); CON-07 `AppCoroutineScope` ownership/shutdown doc (P0).
-- Duplicate-semantics watch: `RetryPolicy` here vs `DcRetryPolicy` in scheduling (SCH-06): keep distinct, document.
+- KD-02 only. Backlog, all PROPOSED (MP 4.2): MP:CON-01 `SingleFlight` audit incl. race tests (P0); MP:CON-02 `JobRegistry` lifecycle/no orphan (P0); MP:CON-03 `RetryPolicy` virtual clock, injectable jitter (P0); MP:CON-04 `FlowSharing` semantics (P0); MP:CON-05 debounce/throttle only if no equivalent (P1); MP:CON-06 optional `ClockProvider` (P1); MP:CON-07 `AppCoroutineScope` ownership/shutdown doc (P0).
+- Duplicate-semantics watch: `RetryPolicy` here vs `DcRetryPolicy` in scheduling (MP:SCH-06): keep distinct, document.
 
 ## 10. Safe extension guide
 - Take `DispatcherProvider` by constructor and use its slots instead of `Dispatchers.*` (THR-02); create scopes at the composition root. Sample consumer: `GreetingViewModel` (`withContext(dispatcherProvider.default)`).
@@ -81,9 +81,10 @@ Presets: `RetryPolicy.None`, `.Default`, `.Background` (5 attempts, 60 s cap). `
 - Read -> Graph -> Propose -> Edit -> Test -> Update docs -> Handover.
 - Read: this page, `09-concurrency-and-threading.md`, the symbol's file and its test.
 - Graph: `codegraph_explore "SingleFlight JobRegistry RetryPolicy DispatcherProvider AppCoroutineScope"` and check callers before any signature change.
-- Recipe (CON-01): add interleaving/failure tests with `StandardTestDispatcher`, no real sleeps; run `./gradlew :runtime:concurrency:test`.
+- Recipe (MP:CON-01): add interleaving/failure tests with `StandardTestDispatcher`, no real sleeps; run `./gradlew :runtime:concurrency:test`.
 - Done: tests pass with evidence in `reports/logs/`, this page's section 5/8 refreshed.
 
 ## 12. Change log and links
 - 2026-10-27 - R1.1a - first DRAFT from source at 2c0ae05 ([`reports/wp/R1.1a.md`](../../reports/wp/R1.1a.md)).
 - Links: [`context-map.yaml`](../context-map.yaml) entry `runtime-concurrency`; rules THR-01, THR-02, INV-05, INV-06; [`module-map.md`](../module-map.md).
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `INV-03` (01-overview-and-invariants.md): reusable base/core APIs do not depend on project-specific business/domain models; `INV-05` (01-overview-and-invariants.md): no locks held while invoking external callbacks or across unsafe suspension points; `INV-06` (01-overview-and-invariants.md): long-lived mutable orchestration has one clear owner; `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `THR-01` (09-concurrency-and-threading.md): no GlobalScope; `THR-02` (09-concurrency-and-threading.md): dispatcher access goes through DispatcherProvider.

@@ -2,7 +2,7 @@
 
 [Back to architecture index](00-index.md) · Rules source: [`02-layers-and-dependencies.md`](02-layers-and-dependencies.md) (DEP-01..05), [`01-overview-and-invariants.md`](01-overview-and-invariants.md) (INV-01, INV-02, INV-07), [`18-build-logic-and-dependencies.md`](18-build-logic-and-dependencies.md) (BLD-03).
 
-**Enforcement status: NOT automated.** KD-02 is Open ([`22-known-deviations.md`](22-known-deviations.md)); the Gradle boundary check + forbidden-edge test is work package R2.1. `./gradlew :app:dependencies` has NOT_RUN (no Gradle evidence: `reports/baseline-verification.md`, Part B). The edge list below was read from `*/build.gradle.kts` (status: file-verified, not build-verified).
+**Enforcement status: static check only, not run in CI yet.** `python3 tools/check_architecture.py --boundaries-only` is the enforcing command for the allowed-edge block below (exit 1 on a forbidden, unlisted or unparseable edge, `:app`, `:testing` in production, or a cycle); an unparseable dependency form is an ERROR, so only `xxx(project(":a:b"))`, `path =` and `add()` forms are supported. It is wired as the blocking CI `architecture` job (run NOT_RUN). KD-02 stays Open, partially mitigated ([`22-known-deviations.md`](22-known-deviations.md)); a Gradle-graph check is not implemented. `./gradlew :app:dependencies` has NOT_RUN (no Gradle evidence: `reports/baseline-verification.md`, Part B). The edge list below was read from `*/build.gradle.kts` (status: file-verified, not build-verified).
 
 ## Rules applied to edges
 

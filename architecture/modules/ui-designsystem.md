@@ -28,7 +28,7 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 ## 3. Dependencies and boundaries
 - Allowed: no `project(...)` dependencies today (`architecture/dependency-rules.md`: `:ui:designsystem -> (none)`); third-party Compose/Material3/Coil only. Direction: tokens -> theme -> components -> feature UI (INV-08, DS-01).
 - Forbidden: any edge to `:app`/feature packages (DEP-01); to `:data:*`, `:security` (DEP-03/INV-02); PROPOSED extension: also `:runtime:*`, `:platform:*`. Business/domain types in public APIs (DEC-06). Feature code importing Coil or Material adaptive types (STRUCTURE.md; Coil confined to `components/DcAsyncImage.kt`, `CONFIRMED_IN_CODE`).
-- Exceptions (DEC/KD): none recorded. Edge enforcement is not automated (KD-02, R2.1).
+- Exceptions (DEC/KD): none recorded. Edge enforcement: KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN).
 
 ## 4. Data/control flow
 ```mermaid
@@ -44,7 +44,7 @@ flowchart LR
 ## 5. Contracts
 - Layers: components read semantics from `MaterialTheme.*`, `LocalDcSpacing`, `LocalDcColors`; feature code must not import `tokens.ColorTokens`/`DcTypography` (DS-01) or use raw `.dp`/`RoundedCornerShape` literals (DS-03).
 - `DcUiScale` (DEC-07): enum `Compact` 0.90 / `Standard` 1.00 / `Comfortable` 1.10. `applyTo(DcSpacing)` scales xSmall..xxLarge and `component`; `applyTo(Typography)` scales fontSize and lineHeight of all 15 styles. The 48dp touch floor (`AccessibilityTokens.MinTouchTarget`, DS-02) and system font scale are not changed. Apply once at the app-level `DcTheme`, never per screen. `applyTo` is `internal`.
-- Component groups by file (names only; the full registry is the future `ui/designsystem/COMPONENTS.md`, UI-01 / R4, not yet created):
+- Component groups by file (names only; the full registry is the future `ui/designsystem/COMPONENTS.md`, MP:UI-01 / R4, not yet created):
 
 | File(s) | Group (sample symbols) |
 |---|---|
@@ -68,7 +68,7 @@ flowchart LR
 ## 7. Edge cases, security and performance
 - No secrets/PII handled; `DcPasswordTextField` masks input only (no storage).
 - Accessibility floor enforced inside components (DS-02); large-font and UI-scale stress verified only by previews/unit tests of scale math, not by device runs (`NOT_RUN`).
-- Recomposition cost of `DcUiScale.applyTo(Typography)` (copies 15 styles per theme call) is not measured. `UNKNOWN`: no benchmark exists (UI-09).
+- Recomposition cost of `DcUiScale.applyTo(Typography)` (copies 15 styles per theme call) is not measured. `UNKNOWN`: no benchmark exists (MP:UI-09).
 - `DcNavigationSuite` enforces supported item count (`requireSupportedNavigationItemCount`, unit-tested).
 
 ## 8. Tests and evidence
@@ -82,7 +82,7 @@ flowchart LR
 ## 9. Known debt / decisions
 - DEC-05 (delta over existing DS, `Dc` prefix kept), DEC-06 (promote primitives, not domain screens), DEC-07 (UI scale at root theme), DEC-08 (widget set + module string defaults).
 - Legacy Material-typed API kept for source compatibility alongside DEC-08 typed models: `DcSnackbarEffect(message: String?, SnackbarHostState, ...)` in `DcFeedbackComponents.kt` vs `DcSnackbarEffect(DcSnackbarMessage?, DcSnackbarHostState, ...)` in `DcMessageComponents.kt`; two `DcDropdownField` overloads in `DcDropdownField.kt` and `DcSelectionComponents.kt`. `CONFIRMED_IN_CODE`.
-- Backlog (PROPOSED, from master-plan 4.12; none started): UI-01 component registry `COMPONENTS.md`; UI-02 semantic token contract + `DcUiScale` accessibility snapshots; UI-03 normalize buttons/inputs/forms/selection/lists/menus; UI-04 feedback/overlay ownership tests; UI-05 `DcContentState` state permutations incl. offline/refreshing; UI-06 adaptive/insets demo; UI-07 expandable card, date range, timeline, data table (only if consumer proves need); UI-08 diagnostics widgets as optional extension; UI-09 screenshot/semantics/recomposition tests; UI-10 per-component usage docs.
+- Backlog (PROPOSED, from master-plan 4.12; none started): MP:UI-01 component registry `COMPONENTS.md`; MP:UI-02 semantic token contract + `DcUiScale` accessibility snapshots; MP:UI-03 normalize buttons/inputs/forms/selection/lists/menus; MP:UI-04 feedback/overlay ownership tests; MP:UI-05 `DcContentState` state permutations incl. offline/refreshing; MP:UI-06 adaptive/insets demo; MP:UI-07 expandable card, date range, timeline, data table (only if consumer proves need); MP:UI-08 diagnostics widgets as optional extension; MP:UI-09 screenshot/semantics/recomposition tests; MP:UI-10 per-component usage docs.
 - No KD currently scoped to this module.
 
 ## 10. Safe extension guide
@@ -100,4 +100,5 @@ flowchart LR
 
 ## 12. Change log and links
 - 2026-10-27 — R1.1d — first DRAFT from source; report `reports/wp/R1.1d.md`.
-- Links: `architecture/context-map.yaml` (`ui-designsystem`), `architecture/dependency-rules.md`, `architecture/07-design-system/`, `architecture/modules/app.md`, future `ui/designsystem/COMPONENTS.md` (PROPOSED, UI-01).
+- Links: `architecture/context-map.yaml` (`ui-designsystem`), `architecture/dependency-rules.md`, `architecture/07-design-system/`, `architecture/modules/app.md`, future `ui/designsystem/COMPONENTS.md` (PROPOSED, MP:UI-01).
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `INV-08` (01-overview-and-invariants.md): design-system consumers use semantic tokens/components, not duplicated brand constants; `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `DEP-02` (02-layers-and-dependencies.md): a feature does not import another feature's private implementation; `DEP-03` (02-layers-and-dependencies.md): presentation does not import infrastructure implementations; `UI-01` (05-presentation-udf.md): state flows down, actions flow up; `DS-01` (07-design-system/README.md): feature UI themes through DcTheme, not raw tokens; `DS-02` (07-design-system/README.md): interactive components enforce the accessibility floor centrally; `DS-03` (07-design-system/README.md): no raw spacing/shape literals in feature UI.

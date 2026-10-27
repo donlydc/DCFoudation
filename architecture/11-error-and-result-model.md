@@ -14,7 +14,7 @@ No application-wide generic `Resource<T>` wrapper exists — feature state remai
 - `safeApiCall` maps expected `IOException`/Retrofit `HttpException`/serialization failures into `NetworkResult.Failure(AppError)`; unexpected/programming failures are rethrown. HTTP payload parsing is opt-in and feature-owned, so an unknown server body is not retained by default.
 - `ArticlesRepository` keeps Room as source of truth, records refresh failures, preserves cached rows, and returns a success flag. `ArticlesViewModel` converts that outcome into durable `UiState` (`isShowingStaleData` plus `userMessage`) rather than exposing infrastructure exceptions or a transient message channel.
 
-`:foundation` owns the intentionally small shared `AppError` vocabulary (`Connectivity`, `Http`, `Serialization`, `Unknown`) and `Retryable`. Feature-specific localized messages remain in feature presentation state; do not invent a generic `UiMessage` mapping in the generator before a real cross-feature policy requires one.
+`:foundation` owns the intentionally small shared `AppError` vocabulary (`Connectivity`, `Http`, `Serialization`, `Storage`, `Unknown`) and the retry classification `AppError.isRetryable` (extension property in `Retryable.kt`; there is no `Retryable` type): true for `Connectivity` and for `Http` 408/429/>=500, false for `Serialization`, `Storage`, `Unknown`. Feature-specific localized messages remain in feature presentation state; do not invent a generic `UiMessage` mapping in the generator before a real cross-feature policy requires one.
 
 ## Rules
 

@@ -15,14 +15,14 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 ## 2. Context and discovery
 - Read first: `architecture/00-index.md`, `architecture/15-observability/{logging,analytics,crash-and-performance}.md` (OBS-01, OBS-ANALYTICS-01, OBS-CRASH-01), `12-security-and-session.md` (SEC-01).
 - Main code: `observability/src/main/java/com/dc/android/foundation/observability/*.kt`. Fakes: `testing/src/main/java/com/dc/android/foundation/testing/ObservabilityFakes.kt`.
-- Tests: none (`test_roots: []`; baseline A2: 0 test files), although `dc.testing` is applied.
+- Tests: `observability/src/test/.../LoggingAnalyticsTrackerTest.kt` (7), `LoggingCrashReporterTest.kt` (6) and a local `FakeLogger.kt` (lane A2; `test_roots: ["observability/src/test"]`; run NOT_RUN). The local fake is used because `:testing`'s `ObservabilityFakes` (`RecordingLogger`) cannot be used here: `:testing -> :observability` is an `api` edge, so the reverse edge would be a cycle (BLD-03).
 - Build config: `observability/build.gradle.kts` (`dc.android.library`, `dc.testing`; no `dependencies {}` block).
 - CodeGraph entry symbols/callers/callees: `Logger` (6 callers in `:app`), `AnalyticsTracker` (`ArticlesViewModel`, `ObservabilityModule`), `CrashReporter` (`ArticlesRepository`, `ObservabilityModule`), `LoggingAnalyticsTracker`/`LoggingCrashReporter` (only `ObservabilityModule`). Callees: `android.util.Log` (only in `AndroidLogger`).
 
 ## 3. Dependencies and boundaries
 - Allowed: no project dependencies (`:observability -> (none)`), Android `android.util.Log` inside `AndroidLogger` only.
 - Forbidden: vendor SDK types in public contracts (DEP-04, INV-07); `android.util.Log` in feature code (OBS-01); edges to `:app` (DEP-01); PROPOSED (not a rule): `:observability -> :security/:data:*/:ui:*`.
-- Exceptions (DEC/KD): KD-05 (local logging-only analytics/crash backend, no vendor chosen). KD-02 applies.
+- Exceptions (DEC/KD): KD-05 (local logging-only analytics/crash backend, no vendor chosen). KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN) applies.
 
 ## 4. Data/control flow
 ```mermaid
@@ -51,15 +51,15 @@ Source refs: `LoggingAnalyticsTracker.trackEvent`, `LoggingCrashReporter.recordE
 - No buffering/rate limiting: every call is a direct `Log` call (cheap, no blocking I/O, THR-02 n/a).
 
 ## 8. Tests and evidence
-- Unit: none in module. Integration: none. Instrumented: none. `:testing` provides `NoOpLogger`, `RecordingLogger`, `NoOp/RecordingAnalyticsTracker`, `NoOp/RecordingCrashReporter` (thread-safe via `synchronized`); `:app` `ArticlesViewModelTest` asserts the `articles_refreshed` event via those fakes (consumer test).
-- Commands (once Gradle runs): `./gradlew :observability:testDebugUnitTest` (no sources); `./gradlew :app:testDebugUnitTest --tests "*ArticlesViewModelTest"`.
+- Unit (JVM, lane A2): `LoggingAnalyticsTrackerTest` (7) and `LoggingCrashReporterTest` (6) with a local `FakeLogger` (tag, level, message content, ordering, no caller-map mutation, no exception message leaked). Not covered: MP:OBS-02 error isolation (`Logging*` do not catch a throwing `Logger`; gap, design decision pending), redaction/schema/correlation id (no code), `AndroidLogger` (needs `android.util.Log`; gap). Integration: none. Instrumented: none. `:testing` provides `NoOpLogger`, `RecordingLogger`, `NoOp/RecordingAnalyticsTracker`, `NoOp/RecordingCrashReporter` (thread-safe via `synchronized`); `:app` `ArticlesViewModelTest` asserts the `articles_refreshed` event via those fakes (consumer test).
+- Commands (once Gradle runs): `./gradlew :observability:testDebugUnitTest`; `./gradlew :app:testDebugUnitTest --tests "*ArticlesViewModelTest"`.
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md)
-- Last verified result: none; `AndroidLogger` has never been exercised by a test in this module.
+- Last verified result: none (NOT_RUN); `AndroidLogger` has never been exercised by a test in this module.
 
 ## 9. Known debt / decisions
 - KD-05 ([22-known-deviations.md](../22-known-deviations.md)): analytics/crash backend is local logging only; exit = real vendor behind same interfaces.
-- PROPOSED backlog (MP 4.10, none implemented): OBS-01 Logger contract + fake/sink tests incl. redaction (P0); OBS-02 analytics/crash contract tests, no-op, error isolation (P0); OBS-03 correlation ID + bounded buffering (P1); OBS-04 optional vendor adapters after privacy/consent (P2); OBS-05 structured debug diagnostic export (P1).
-- Observations: `dc.testing` applied but zero tests; edge `:data:network -> :observability` has no `import` of it (`NetworkClientConfig` KDoc only mentions observability vendors) - candidate unused dependency, not changed here. Rule-ID overlap: rule OBS-01 (`logging.md`) vs backlog OBS-01.
+- PROPOSED backlog (MP 4.10, none implemented): MP:OBS-01 Logger contract + fake/sink tests incl. redaction (P0); MP:OBS-02 analytics/crash contract tests, no-op, error isolation (P0); MP:OBS-03 correlation ID + bounded buffering (P1); MP:OBS-04 optional vendor adapters after privacy/consent (P2); MP:OBS-05 structured debug diagnostic export (P1).
+- Observations: `dc.testing` applied; tests cover the two `Logging*` classes only (no test for `AndroidLogger`, which needs `android.util.Log`, nor for exception isolation: the `Logging*` classes do not catch a throwing `Logger`); edge `:data:network -> :observability` has no `import` of it (`NetworkClientConfig` KDoc only mentions observability vendors) - candidate unused dependency, not changed here. Bare `OBS-01` is the rule in `15-observability/logging.md`; `MP:OBS-01` is the Logger-contract backlog item.
 
 ## 10. Safe extension guide
 - Add a vendor adapter in `:app` (or an opt-in module) implementing the existing interfaces and swap the `ObservabilityModule` binding; no call site changes (KDoc of `Logging*`). Keep telemetry off by default (MP 4.10). Sample consumer: `ArticlesViewModel` (logger + analytics), `ArticlesRepository` (crash). Do not add vendor types to the public contracts.
@@ -72,3 +72,4 @@ Source refs: `LoggingAnalyticsTracker.trackEvent`, `LoggingCrashReporter.recordE
 ## 12. Change log and links
 - 2026-10-27 — R1.1c — first draft from source and CodeGraph. Report: `reports/wp/R1.1c.md`.
 - Links: `context-map.yaml` entry `observability`; `15-observability/`; `dependency-rules.md`.
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `INV-07` (01-overview-and-invariants.md): infrastructure exceptions and vendor types do not leak into presentation/public contracts; `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `DEP-04` (02-layers-and-dependencies.md): infrastructure-specific types stay behind the owning module boundary; `THR-02` (09-concurrency-and-threading.md): dispatcher access goes through DispatcherProvider; `SEC-01` (12-security-and-session.md): no secret/token/PII in a log call; `OBS-01` (15-observability/logging.md): feature code uses Logger, never android.util.Log; `OBS-ANALYTICS-01` (15-observability/analytics.md): analytics events go through AnalyticsTracker, never a vendor SDK directly; `OBS-CRASH-01` (15-observability/crash-and-performance.md): crash reporting goes through CrashReporter, never a vendor SDK directly; `CFG-01` (16-config-feature-flags-environments.md): BuildConfig.DEBUG is read in exactly one place.

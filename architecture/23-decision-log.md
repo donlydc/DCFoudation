@@ -8,6 +8,18 @@ Durable decisions with date, context, decision, alternatives, consequences, affe
 
 ## Entries
 
+### DEC-09 — 2026-10-27 — Master-plan backlog items are written `MP:<ID>`; bare IDs mean architecture rules
+
+**Context:** Master-plan backlog IDs (`plan/FOUNDATION_MASTER_PLAN.md` section 4: `PERM-01`, `TST-01`, `SEC-01`, `NAV-01`, `OBS-01`, `BLD-01..03`, `UI-01..03`) reuse the prefix and number of existing architecture rules with a different meaning. R1.1 pages and the R1.4 docs-only trial showed a task titled "PERM-01" is ambiguous.
+
+**Decision:** A bare ID (`PERM-01`) is an architecture rule defined in `architecture/`. A backlog item is written `MP:<ID>` (`MP:PERM-01`). `context-map.yaml` `owners_rules` hold bare rule IDs only. Applied to `architecture/modules/*.md`, `architecture/features/*.md` and the module template; also expected in reports, work-package titles and commit messages.
+
+**Alternatives considered:** Renumber the rules (breaks every existing reference and the stable-ID requirement); renumber the backlog (breaks the master plan); a `BL-` or `-BL-` infix (longer, no better than a colon prefix).
+
+**Consequences:** `plan/AGENT_EXECUTION_PLAN.md` and `plan/FOUNDATION_MASTER_PLAN.md` still use bare backlog IDs (outside the writable scope of R1.5); readers must apply the convention when mapping a plan row to a rule. Documented in `context-protocol.md` section A2.
+
+**Affected:** `architecture/context-protocol.md`, `architecture/modules/**`, `architecture/features/**`, `architecture/context-map.yaml` (comment), `architecture/00-index.md`.
+
 ### DEC-08 — 2026-10-18 — Extend the DS widget set with module-owned string defaults and typed models
 
 **Context:** Common widgets (menus, tabs, badges, forms, snackbar, selection groups) were missing, and several components hard-coded English default labels.

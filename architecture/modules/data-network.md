@@ -49,7 +49,7 @@ Refs: `NetworkClientFactory.createOkHttpClient` `:25,29`, `createRetrofit` `:50`
 - Base URL and environment live in `:app` `config/AppEnvironmentProvider.kt`; nothing in this module hard-codes them. No Hilt in this module.
 
 ## 7. Edge cases, security and performance
-- SEC-01: logging is never `HEADERS`/`BODY` and never runs in release; `BASIC` still logs method/URL/status (URL query data would appear in debug logs). No header redaction exists because headers are not logged (NET-02 PROPOSED).
+- SEC-01: logging is never `HEADERS`/`BODY` and never runs in release; `BASIC` still logs method/URL/status (URL query data would appear in debug logs). No header redaction exists because headers are not logged (MP:NET-02 PROPOSED).
 - Error bodies are discarded by default; a custom parser must not log raw server text.
 - No retry, no auth interceptor, no token refresh. Request id is a random UUID per request.
 - Header map is applied to every request of that client; do not put secrets in `headers` (stored in `NetworkClientConfig`, whose data-class `toString` would print them).
@@ -63,13 +63,14 @@ Refs: `NetworkClientFactory.createOkHttpClient` `:25,29`, `createRetrofit` `:50`
 - Not covered: Retrofit end-to-end mapping with a real `ArticlesApiService`, debug-logging level, `NetworkClientConfig` validation failures, cancellation.
 
 ## 9. Known debt / decisions
-- No KD/DEC for this module. Backlog (PROPOSED, MP 4.6): NET-01 exhaustive transport/HTTP/serialization/cancellation mapping (P0); NET-02 timeouts, request id, redaction (P1); NET-03 retry only for safe/idempotent ops (P1); NET-04 optional auth/refresh adapter only with a real consumer (P2); NET-05 API contract/KDoc/sample for error response and config (P0).
+- No KD/DEC for this module. Backlog (PROPOSED, MP 4.6): MP:NET-01 exhaustive transport/HTTP/serialization/cancellation mapping (P0); MP:NET-02 timeouts, request id, redaction (P1); MP:NET-03 retry only for safe/idempotent ops (P1); MP:NET-04 optional auth/refresh adapter only with a real consumer (P2); MP:NET-05 API contract/KDoc/sample for error response and config (P0).
+- MP:NET-05 deliverable and acceptance (master-plan 4.6): "API contract/KDoc/sample for error response and client config", priority P0, acceptance "the `articles` sample demonstrates the integration". The master plan does not name a file; no page or KDoc currently holds it (PROPOSED location: KDoc on `NetworkResult`/`HttpErrorBodyParser`/`NetworkClientConfig` plus a short section in `10-data/network.md`; this page links to it once written). Factual note for task wording: `articles` does NOT map `NetworkResult` to `AppError` for the UI; `DefaultArticlesNetworkDataSource.fetchArticles` returns `NetworkResult` (via `safeApiCall`) and `ArticlesRepository.refresh` collapses it to `Boolean` (`Success` -> upsert, `Failure` -> `false`, with `error.cause` sent to `CrashReporter`). `AppError` is seen only inside `NetworkResult.Failure` and by `ArticlesSyncWorker`/`DcWorker`.
 - Open items: `:observability` edge appears unused (see §3); `NetworkModule` uses the `isDebug` overload rather than `NetworkClientConfig`.
 
 ## 10. Safe extension guide
 - New API: add the Retrofit interface, DTOs and a `*NetworkDataSource` in the feature (sample: `articles/ArticlesNetworkDataSource.kt`), wrap calls with `safeApiCall`, and map `NetworkResult` in the repository.
 - Different timeouts/headers: build a `NetworkClientConfig` and pass it to `createOkHttpClient`; add a Hilt provider in `:app` `NetworkModule` (do not create a giant module).
-- Retry/auth: add as feature-level or new optional adapter (NET-03/NET-04); do not add to the interceptor by default.
+- Retry/auth: add as feature-level or new optional adapter (MP:NET-03/MP:NET-04); do not add to the interceptor by default.
 
 ## 11. AI task playbook
 - Read → Graph → Propose → Edit → Test → Update docs → Handover.
@@ -79,3 +80,4 @@ Refs: `NetworkClientFactory.createOkHttpClient` `:25,29`, `createRetrofit` `:50`
 ## 12. Change log and links
 - 2026-10-27 R1.1b: first DRAFT from source (base 2c0ae05). Report: [`reports/wp/R1.1b.md`](../../reports/wp/R1.1b.md).
 - Links: context-map id `data-network`; rules DAT-NET-01, ERR-01, SEC-01; [`dependency-rules.md`](../dependency-rules.md).
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `DEP-04` (02-layers-and-dependencies.md): infrastructure-specific types stay behind the owning module boundary; `ERR-01` (11-error-and-result-model.md): infrastructure exceptions are caught at the data-source boundary, not in the ViewModel; `DAT-NET-01` (10-data/network.md): feature API/DTO types stay feature-owned; generic client policy stays in :data:network; `SEC-01` (12-security-and-session.md): no secret/token/PII in a log call; `BLD-03` (18-build-logic-and-dependencies.md): test utilities never enter production runtime graphs.

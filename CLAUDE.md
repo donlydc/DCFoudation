@@ -218,7 +218,7 @@ If graph data conflicts with current source/build configuration, trust verified 
 
 For each task:
 
-1. Read this `CLAUDE.md`.
+1. Read this `CLAUDE.md`, then `architecture/context-protocol.md` and look the task up in `architecture/context-map.yaml` (module/feature page, entry symbols, owner rules) before any code search. CodeGraph-first (§3a) still governs code lookup.
 2. If available, read `architecture/00-index.md` and `architecture/01-overview-and-invariants.md`.
 3. Use CodeGraph (`codegraph_explore`) first for code lookup (§3a); read `graphify-out/GRAPH_REPORT.md` before broad architecture-level exploration.
 4. Identify the smallest relevant modules/files.

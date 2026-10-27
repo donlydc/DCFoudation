@@ -8,7 +8,7 @@ Legends for `Status:` / `Test status:` and per-fact tags: [`TEMPLATE.md`](TEMPLA
 
 ## 1. Identity and responsibility
 - Owns: the shared infrastructure-error vocabulary `AppError` and its retryability policy `AppError.isRetryable`. CONFIRMED_IN_CODE
-- Does not own: error-to-text/UI mapping (CORE-03, PROPOSED), `NetworkResult`/`safeApiCall` (`:data:network`), Android or HTTP-library types, DTOs, navigation events, locale strings (MP 4.1 "do not put here").
+- Does not own: error-to-text/UI mapping (MP:CORE-03, PROPOSED), `NetworkResult`/`safeApiCall` (`:data:network`), Android or HTTP-library types, DTOs, navigation events, locale strings (MP 4.1 "do not put here").
 - Public package/API: `com.dc.android.foundation.core` - `AppError` (sealed interface: `Connectivity`, `Http(code, serverMessage)`, `Serialization`, `Storage`, `Unknown`; each has nullable `cause`), `AppError.isRetryable` (extension, file `Retryable.kt`; there is no `Retryable` type).
 - Consumer(s): `:data:network` (`NetworkResult.Failure(AppError)`), `:runtime:scheduling` (`DcJobResult.Failure`, `DcJobState.Failed`, `DcWorker`), `:app` (`ArticlesSyncWorker`; `ArticlesViewModelTest` builds `AppError.Connectivity`).
 
@@ -22,7 +22,7 @@ Legends for `Status:` / `Test status:` and per-fact tags: [`TEMPLATE.md`](TEMPLA
 ## 3. Dependencies and boundaries
 - Allowed: none (current edge table in [`dependency-rules.md`](../dependency-rules.md): `:foundation -> (none)`). Inbound edges from `:data:network`, `:runtime:scheduling`, `:app` are allowed there.
 - Forbidden: any edge to `:app` (DEP-01); PROPOSED (not yet a rule): `:foundation` stays Android-free, based on the build fact that it applies `dc.kotlin.jvm`.
-- Exceptions (DEC/KD): none for this module. KD-02 (boundary enforcement not automated) applies to every edge: [`22-known-deviations.md`](../22-known-deviations.md).
+- Exceptions (DEC/KD): none for this module. KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN) applies to every edge: [`22-known-deviations.md`](../22-known-deviations.md).
 
 ## 4. Data/control flow
 ```mermaid
@@ -42,13 +42,13 @@ Refs: `NetworkResult.kt:21` (`Failure(error: AppError)`), `DcWorker.kt:37-68,87-
 - `AppError.isRetryable`: `Connectivity` true; `Http` true for 408, 429, >=500; `Serialization`, `Storage`, `Unknown` false.
 - Errors/cancellation: the module throws nothing and has no coroutine or Android dependency; cancellation is the callers' concern (`DcWorker` rethrows `CancellationException` before mapping).
 - Threading/lifecycle: pure immutable data classes; no state, no lifecycle.
-- Versioning/API policy: none written (CORE-04, PROPOSED).
+- Versioning/API policy: none written (MP:CORE-04, PROPOSED).
 
 ## 6. DI, configuration and ownership
 Not bound in any Hilt module: values are constructed at failure sites. No configuration or variants. `:app/.../di/` contains no `AppError` binding (ConcurrencyModule, DataStoreModule, DatabaseModule, NetworkModule, ObservabilityModule, SecurityModule).
 
 ## 7. Edge cases, security and performance
-- `Http.serverMessage` and `cause` can carry server/infrastructure text; do not log or show them raw (SEC-01 intent, `AppError` KDoc). No policy enforces this beyond the KDoc (CORE-04, PROPOSED).
+- `Http.serverMessage` and `cause` can carry server/infrastructure text; do not log or show them raw (SEC-01 intent, `AppError` KDoc). No policy enforces this beyond the KDoc (MP:CORE-04, PROPOSED).
 - `DcWorker.appErrorFrom` rebuilds errors from a kind string only: `Http` comes back as `code = 0` and `cause`/`serverMessage` are lost, so `isRetryable` on a restored `Http` is false.
 - `AppError.Storage` has no production creation site in the repo outside `DcWorker`'s mapping (only `appErrorFrom` instantiates it); the data/storage modules do not emit it yet.
 - Negligible size/perf cost.
@@ -57,13 +57,13 @@ Not bound in any Hilt module: values are constructed at failure sites. No config
 - Unit: `AppErrorTest` - `isRetryable` for Connectivity, Http 408/429/500/404, Serialization. Not covered: Storage/Unknown, `cause` handling, `Http` 499/599 boundaries.
 - Integration: none in-module. Consumer mapping is exercised indirectly by `NetworkResultTest` (`:data:network`).
 - Instrumented: none.
-- Commands: `./gradlew :foundation:test` (JVM module). CI runs `testDebugUnitTest`, which does not exist for JVM modules (baseline Part A drift D2).
+- Commands: `./gradlew :foundation:test` (JVM module). `testDebugUnitTest` does not exist for JVM modules (baseline Part A drift D2); lane A1 added an explicit `:foundation:test :runtime:concurrency:test` step to `ci.yml` (run NOT_RUN).
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md, Part B: Gradle blocked at daemon-toolchain provisioning)
 - Last verified result: none for the current HEAD.
 
 ## 9. Known debt / decisions
-- KD-02 (edges unenforced). No module-specific KD/DEC.
-- Backlog, all PROPOSED (MP 4.1): CORE-01 `AppError` exhaustiveness audit across app/network/storage/Worker (P0); CORE-02 unify `Outcome`/`Result` only if `NetworkResult` duplicates a domain result (P1, avoid a third result type); CORE-03 error-presentation mapping lives in presentation, test raw error -> UI message (P0); CORE-04 public-API policy, compatibility, KDoc (P1).
+- KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN). No module-specific KD/DEC.
+- Backlog, all PROPOSED (MP 4.1): MP:CORE-01 `AppError` exhaustiveness audit across app/network/storage/Worker (P0); MP:CORE-02 unify `Outcome`/`Result` only if `NetworkResult` duplicates a domain result (P1, avoid a third result type); MP:CORE-03 error-presentation mapping lives in presentation, test raw error -> UI message (P0); MP:CORE-04 public-API policy, compatibility, KDoc (P1).
 - Doc drift to resolve: see report R1.1a section D (11-error-and-result-model.md lists four variants and a `Retryable` type).
 
 ## 10. Safe extension guide
@@ -75,9 +75,10 @@ Not bound in any Hilt module: values are constructed at failure sites. No config
 - Read -> Graph -> Propose -> Edit -> Test -> Update docs -> Handover.
 - Read: this page, `11-error-and-result-model.md`, `AppError.kt`, `Retryable.kt`.
 - Graph: `codegraph_explore "AppError isRetryable DcWorker NetworkResult DcJobState"`.
-- Recipe (CORE-01): list every `when (error)` and constructor call, add missing-variant tests per consumer, then run `./gradlew :foundation:test :data:network:testDebugUnitTest :runtime:scheduling:testDebugUnitTest`.
+- Recipe (MP:CORE-01): list every `when (error)` and constructor call, add missing-variant tests per consumer, then run `./gradlew :foundation:test :data:network:testDebugUnitTest :runtime:scheduling:testDebugUnitTest`.
 - Done: exhaustive mappings, tests added with evidence under `reports/logs/`, this page and the 11-doc updated.
 
 ## 12. Change log and links
 - 2026-10-27 - R1.1a - first DRAFT from source at 2c0ae05 ([`reports/wp/R1.1a.md`](../../reports/wp/R1.1a.md)).
 - Links: [`context-map.yaml`](../context-map.yaml) entry `foundation`; rules INV-07, ERR-01; [`module-map.md`](../module-map.md).
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `INV-07` (01-overview-and-invariants.md): infrastructure exceptions and vendor types do not leak into presentation/public contracts; `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `ERR-01` (11-error-and-result-model.md): infrastructure exceptions are caught at the data-source boundary, not in the ViewModel; `SEC-01` (12-security-and-session.md): no secret/token/PII in a log call.

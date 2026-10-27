@@ -42,7 +42,7 @@ Version catalog usage and whether/when Gradle convention plugins earn their keep
 
 ## Testing / validation
 
-`./gradlew help` verifies the included build and project configuration. Focused module compilation plus `./gradlew testDebugUnitTest` verify that convention-provided dependencies and generated KSP/Room/Hilt tasks remain wired correctly. No automated catalog-lint exists yet.
+`./gradlew help` verifies the included build and project configuration. Focused module compilation plus `./gradlew testDebugUnitTest` (Android modules and `:app` only; JVM modules need `test`, build-logic needs `-p build-logic test`, see `19-ci-release-quality-gates.md`) verify that convention-provided dependencies and generated KSP/Room/Hilt tasks remain wired correctly. No automated catalog-lint exists yet.
 
 ## Related documents
 

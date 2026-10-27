@@ -22,7 +22,7 @@ Legends for `Status:` / `Test status:` and per-fact tags: [`TEMPLATE.md`](TEMPLA
 ## 3. Dependencies and boundaries
 - Allowed: `:foundation`, `:runtime:concurrency` (current table in [`dependency-rules.md`](../dependency-rules.md)); inbound from `:app`, `:testing` (api).
 - Forbidden: edge to `:app` (DEP-01) - hence worker subclasses live in `:app`; production edge to `:testing` (BLD-03); PROPOSED (no rule ID): `:data:*`, `:security`, `:ui:*`.
-- Exceptions (DEC/KD): none for this module; KD-02 (edges unenforced). Note: `AppError` appears in public types (`DcJobState.Failed`, `DcJobResult.Failure`) while `:foundation` is `implementation`, so consumers must declare it themselves (see report D).
+- Exceptions (DEC/KD): none for this module; KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN). Note: `AppError` appears in public types (`DcJobState.Failed`, `DcJobResult.Failure`) while `:foundation` is `implementation`, so consumers must declare it themselves (see report D).
 
 ## 4. Data/control flow
 ```mermaid
@@ -63,7 +63,7 @@ Refs: `DcScheduler.kt:107-146` (routing, mismatched trigger/request -> `Rejected
 - Last verified result: none for the current HEAD.
 
 ## 9. Known debt / decisions
-- KD-02. Backlog, all PROPOSED (MP 4.3): SCH-01 `DcJobSpec`/unique-work/backoff/state audit with idempotency tests (P0); SCH-02 DST/timezone/clock-shift tests (P0); SCH-03 codec/store corruption/boot restore/request identity (P0); SCH-04 exact-alarm denied/revoked/unsupported contract (P1); SCH-05 instrumentation for broadcast/Worker (P1; log `NOT_RUN` without device); SCH-06 document `DcRetryPolicy` vs concurrency `RetryPolicy` distinction (P0).
+- KD-02. Backlog, all PROPOSED (MP 4.3): MP:SCH-01 `DcJobSpec`/unique-work/backoff/state audit with idempotency tests (P0); MP:SCH-02 DST/timezone/clock-shift tests (P0); MP:SCH-03 codec/store corruption/boot restore/request identity (P0); MP:SCH-04 exact-alarm denied/revoked/unsupported contract (P1); MP:SCH-05 instrumentation for broadcast/Worker (P1; log `NOT_RUN` without device); MP:SCH-06 document `DcRetryPolicy` vs concurrency `RetryPolicy` distinction (P0).
 - Design note: [`plan/SCHEDULING_MODULE_PLAN.md`](../../plan/SCHEDULING_MODULE_PLAN.md) exists; it is not an accepted DEC.
 
 ## 10. Safe extension guide
@@ -75,9 +75,10 @@ Refs: `DcScheduler.kt:107-146` (routing, mismatched trigger/request -> `Rejected
 - Read -> Graph -> Propose -> Edit -> Test -> Update docs -> Handover.
 - Read: this page, `14-background-work.md`, the touched file and its test.
 - Graph: `codegraph_explore "DcScheduler AndroidDcScheduler DcWorker DcAlarmReceiver DcJobSpec"`; check `DcApplication`, `ArticlesSyncWorker`, `FakeScheduler` blast radius.
-- Recipe (SCH-02): extend `NextOccurrenceTest` with fixed `ZoneId`/`Instant`, no real clock; run `./gradlew :runtime:scheduling:testDebugUnitTest`.
+- Recipe (MP:SCH-02): extend `NextOccurrenceTest` with fixed `ZoneId`/`Instant`, no real clock; run `./gradlew :runtime:scheduling:testDebugUnitTest`.
 - Done: tests with evidence under `reports/logs/`, public-API/manifest changes reflected here and in `14-background-work.md`.
 
 ## 12. Change log and links
 - 2026-10-27 - R1.1a - first DRAFT from source at 2c0ae05 ([`reports/wp/R1.1a.md`](../../reports/wp/R1.1a.md)).
 - Links: [`context-map.yaml`](../context-map.yaml) entry `runtime-scheduling`; rules BG-01, BG-02; [`module-map.md`](../module-map.md).
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `SEC-01` (12-security-and-session.md): no secret/token/PII in a log call; `BG-01` (14-background-work.md): select the engine from the required delivery guarantee; `BG-02` (14-background-work.md): exact alarms are opt-in and restoreable; `BLD-03` (18-build-logic-and-dependencies.md): test utilities never enter production runtime graphs.

@@ -8,7 +8,7 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 
 ## 1. Identity and responsibility
 - Owns: the 8 `dc.*` Gradle convention plugins, shared SDK/Java constants, and the feature scaffold generator (`createFeature`). It is an included build (`settings.gradle.kts:2` `includeBuild("build-logic")`, root project `dc-build-logic`), not a project of the main build.
-- Does not own: dependency versions (the catalog `gradle/libs.versions.toml`, shared via `build-logic/settings.gradle.kts` `from(files("../gradle/libs.versions.toml"))`), module dependency-edge enforcement (none exists, KD-02), `gradle.properties` flags (KD-03), CI (`.github/workflows/ci.yml`).
+- Does not own: dependency versions (the catalog `gradle/libs.versions.toml`, shared via `build-logic/settings.gradle.kts` `from(files("../gradle/libs.versions.toml"))`), module dependency-edge enforcement (static checker only, outside this module: `tools/check_architecture.py`; no Gradle-graph task, KD-02), `gradle.properties` flags (KD-03), CI (`.github/workflows/ci.yml`).
 - Public package/API: default package (no package declaration); plugin ids below.
 - Consumer(s): every module `build.gradle.kts` (via `id("dc.*")`); `:app` additionally applies `dc.feature.generator`.
 
@@ -21,7 +21,7 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 ## 3. Dependencies and boundaries
 - Allowed: AGP, Kotlin, Compose-compiler, KSP, Hilt and Room Gradle plugins as `implementation` of the build-logic build; catalog libraries via `Project.libs`.
 - Forbidden: project `project(":...")` coupling to app code (it is a separate build, `depends_on: []`); hard-coded dependency versions (BLD-01); adding `:testing` to production configurations (BLD-03 - `dc.testing` adds only external test libs, not `:testing`).
-- Exceptions (DEC/KD): KD-03 (`android.disallowKotlinSourceSets=false` for KSP on AGP 9; `gradle.properties:24`); KD-02 (no enforced module boundaries).
+- Exceptions (DEC/KD): KD-03 (`android.disallowKotlinSourceSets=false` for KSP on AGP 9; `gradle.properties:24`); KD-02 (module boundaries enforced only by the static checker, no Gradle-graph task; Open, partially mitigated).
 
 ## 4. Data/control flow
 ```mermaid
@@ -56,14 +56,14 @@ flowchart LR
 
 ## 8. Tests and evidence
 - Unit: `FeatureScaffoldGeneratorTest` - minimal feature files; capability boundaries; invalid name; existing-file abort. Integration/Instrumented: none. No test covers the Gradle plugins themselves.
-- Commands (once Gradle runs): `./gradlew -p build-logic test`; smoke `./gradlew help` (verifies the included build); generator smoke `./gradlew :app:createFeature -PfeatureName=Sample` (then revert).
+- Commands (once Gradle runs): `./gradlew -p build-logic test`; boundary gate `python3 tools/check_architecture.py --boundaries-only`; checker self-tests `python3 -m unittest discover -s tools -p 'test_*.py'`; smoke `./gradlew help` (verifies the included build); generator smoke `./gradlew :app:createFeature -PfeatureName=Sample` (then revert).
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 - Last verified result: none; no Gradle task has been run by R0/R1 agents.
 
 ## 9. Known debt / decisions
-- CI finding (CONFIRMED_IN_CODE for the workflow, coverage by Gradle selection semantics, not run-verified): `.github/workflows/ci.yml` runs `./gradlew testDebugUnitTest`, lint and `assembleDebug` only. `testDebugUnitTest` is an Android-variant task, so `dc.kotlin.jvm` modules (`:foundation`, `:runtime:concurrency`; tests run via `test`) are not selected, and tests of the included build (`build-logic/src/test`) are not part of the main task graph. Their tests therefore do not run in CI. Needs a decision: add `./gradlew test` (or explicit `:foundation:test :runtime:concurrency:test`) plus `-p build-logic test`. Docs `19-ci-release-quality-gates.md` say `testDebugUnitTest` covers "all modules" (drift, report D). CI uses JDK 21 while the daemon requires toolchain 25 (`gradle/gradle-daemon-jvm.properties`); effect UNKNOWN.
+- CI finding RESOLVED in `ci.yml` by lane A1 (source-read; workflow run NOT_RUN): the `build` job now also runs `./gradlew :foundation:test :runtime:concurrency:test` and `./gradlew -p build-logic test`. Cause (Gradle task-selection semantics, not run-verified): `testDebugUnitTest` is an Android-variant task, so `dc.kotlin.jvm` modules (task `test`) and the included build were not selected. `build-logic` has its own `settings.gradle.kts`, so it is standalone-buildable; root `gradle.properties` and daemon-JVM criteria do not apply to that invocation. Effect of the JDK 21 launcher vs daemon toolchain 25 (`gradle/gradle-daemon-jvm.properties`) stays UNKNOWN until a real CI run.
 - KD-03: `dc.hilt` and `dc.room` apply KSP; the flag stays until KSP supports AGP 9 `android.sourceSets` (KSP `2.2.10-2.0.2`, AGP 9.3.1 per baseline A1).
-- PROPOSED backlog (MP 4.14, none implemented): BLD-01 automated dependency-boundary checks, fail CI on forbidden edge (P0, = R2.1/KD-02); BLD-02 verify generator output compiles/tests, add doc stub (P1); BLD-03 check KD-03 workaround against resolved versions (P0); BLD-04 repeatable test/lint/assemble + report export for all modules (P0); BLD-05 release publishing/API compatibility only when shipping artifacts (P1); BLD-06 portable or optional Graphify hooks, keep CodeGraph (P1). Rule IDs BLD-01..03 in `18-...md` differ in meaning from these backlog IDs.
+- Backlog (MP 4.14; PROPOSED unless marked PARTIAL): MP:BLD-01 automated dependency-boundary checks, fail CI on forbidden edge (P0, = R2.1/KD-02; PARTIAL: static checker `tools/check_architecture.py --boundaries-only` implemented and wired as the blocking CI `architecture` job, source verified and CI run NOT_RUN; the Gradle-graph task is NOT implemented, see `22-known-deviations.md` KD-02); MP:BLD-02 verify generator output compiles/tests, add doc stub (P1); MP:BLD-03 check KD-03 workaround against resolved versions (P0); MP:BLD-04 repeatable test/lint/assemble + report export for all modules (P0; PARTIAL: test, lint, assemble steps and report uploads added to `ci.yml`, CI run NOT_RUN); MP:BLD-05 release publishing/API compatibility only when shipping artifacts (P1); MP:BLD-06 portable or optional Graphify hooks, keep CodeGraph (P1). Bare `BLD-01..03` are the rules in `18-build-logic-and-dependencies.md`; backlog items are written `MP:<ID>` (convention in `context-protocol.md`).
 
 ## 10. Safe extension guide
 - New capability = new small `Dc*ConventionPlugin` registered in `build-logic/build.gradle.kts`, composable with others (BLD-02); read versions from the catalog (BLD-01). Add a generator option by extending `FeatureGeneratorOptions`, `CreateFeatureTask`, `DcFeatureGeneratorPlugin` and a test case together. Sample consumer: `:app` (`createFeature`), `:data:database` (`dc.room`).
@@ -76,3 +76,4 @@ flowchart LR
 ## 12. Change log and links
 - 2026-10-27 — R1.1c — first draft from plugin sources and CodeGraph. Report: `reports/wp/R1.1c.md`.
 - Links: `context-map.yaml` entry `build-logic`; `18-build-logic-and-dependencies.md`; `19-ci-release-quality-gates.md`; `22-known-deviations.md` (KD-02, KD-03).
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `BLD-01` (18-build-logic-and-dependencies.md): no dependency version outside the version catalog; `BLD-02` (18-build-logic-and-dependencies.md): convention plugins are composable capabilities; `BLD-03` (18-build-logic-and-dependencies.md): test utilities never enter production runtime graphs.

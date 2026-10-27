@@ -10,17 +10,18 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 - Role: reference (Master Plan 6.1 Flow A; real instance of DAT-CACHE-01, BG-01, PERM-01, DAT-NET-01, DAT-ROOM-01)
 
 ## 2. Presentation contract (UDF — UI-01/UI-02)
+- Files (all under `app/src/main/java/com/dc/android/foundation/articles/`): `ArticlesRoute.kt`, `ArticlesScreen.kt`, `ArticlesViewModel.kt`, `ArticlesUiState.kt`, `ArticlesUiAction.kt`, `ArticlesUiEffect.kt`; data side `ArticlesRepository.kt` (also `Article`), `ArticlesNetworkDataSource.kt`, `ArticlesApiService.kt`, `ArticleDto.kt`, `ArticlesSyncWorker.kt`, `ArticlesModule.kt`.
 - Route: `ArticlesRoute` (`ArticlesRoute.kt:32`); `hiltViewModel()`, collects state and `effects`, owns `rememberLauncherForActivityResult(RequestPermission)` (only Route touches the OS permission API, PERM-01), hosts `DcScaffold`
 - Screen: `ArticlesScreen(state, onAction, modifier)` (`ArticlesScreen.kt:26`); `DcContentState` + `LazyColumn` of `DcCard`; previews default and stale
 - ViewModel: `ArticlesViewModel` (`@HiltViewModel`, extends `ViewModel()`)
-- UiState: `ArticlesUiState(articles: List<Article>, isRefreshing, isShowingStaleData, userMessage: String?, notificationPermissionState: PermissionState = NotRequested)`
-- UiAction: sealed `ArticlesUiAction` = `Refresh`, `RequestNotificationPermission`, `UserMessageShown`, `UpdateNotificationPermissionState(state)`
-- UiEffect: `ArticlesUiEffect.LaunchNotificationPermissionRequest` (BUFFERED `Channel`, `receiveAsFlow`); the only effect, Route-owned framework integration (UI-02)
+- UiState (`ArticlesUiState.kt`): `ArticlesUiState(articles: List<Article>, isRefreshing, isShowingStaleData, userMessage: String?, notificationPermissionState: PermissionState = NotRequested)`
+- UiAction (`ArticlesUiAction.kt`): sealed `ArticlesUiAction` = `Refresh`, `RequestNotificationPermission`, `UserMessageShown`, `UpdateNotificationPermissionState(state)`
+- UiEffect (`ArticlesUiEffect.kt`): `ArticlesUiEffect.LaunchNotificationPermissionRequest` (BUFFERED `Channel`, `receiveAsFlow`); the only effect, Route-owned framework integration (UI-02)
 
 ## 3. DI and ownership
 - VM deps: `ArticlesRepository` (feature), `DispatcherProvider` (`:runtime:concurrency`), `Logger` + `AnalyticsTracker` (`:observability`), `SavedStateHandle` (injected but not read in `ArticlesViewModel` source).
 - Repository deps: `ArticlesNetworkDataSource` (feature iface), `ArticleDao` (`:data:database`), `CrashReporter` (`:observability`).
-- Hilt: `ArticlesModule` (`@InstallIn(SingletonComponent)`, `@Binds DefaultArticlesNetworkDataSource -> ArticlesNetworkDataSource`; DI-02). Cross-module providers in `app/.../di/`: `NetworkModule` (`@Singleton` OkHttpClient/Retrofit via `NetworkClientFactory`, `ArticlesApiService`; base URL `AppEnvironmentProvider.ARTICLES_BASE_URL`), `DatabaseModule` (`DcDatabase`, `ArticleDao`). `ArticlesSyncWorker` is `@HiltWorker`/`@AssistedInject`; `DcApplication` supplies `HiltWorkerFactory` as `Configuration.Provider`.
+- Hilt: `ArticlesModule` (`ArticlesModule.kt`; `@InstallIn(SingletonComponent)`, `@Binds DefaultArticlesNetworkDataSource -> ArticlesNetworkDataSource`; DI-02). Cross-module providers in `app/.../di/`: `NetworkModule` (`@Singleton` OkHttpClient/Retrofit via `NetworkClientFactory`, `ArticlesApiService`; base URL `AppEnvironmentProvider.ARTICLES_BASE_URL`), `DatabaseModule` (`DcDatabase`, `ArticleDao`). `ArticlesSyncWorker` is `@HiltWorker`/`@AssistedInject`; `DcApplication` supplies `HiltWorkerFactory` as `Configuration.Provider`.
 - State owner: Room `ArticleDao` table is the single owner of article data; `ArticlesViewModel` holds only transient UI flags. Permission state is Route-reported into UiState.
 
 ## 4. Data flow
@@ -50,7 +51,7 @@ flowchart LR
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 
 ## 8. Known debt / decisions
-- DEC-04 (why `articles` exists). KD-02 (boundaries unenforced). KD-05 (analytics/crash use local no-op backends).
+- DEC-04 (why `articles` exists). KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN). KD-05 (analytics/crash use local no-op backends).
 - Unverified: no `INTERNET` permission found in any `AndroidManifest.xml` (only `POST_NOTIFICATIONS`); merged manifest not inspected, build NOT_RUN. Reported in R1.2 drift.
 
 ## 9. AI playbook
@@ -58,3 +59,4 @@ flowchart LR
 - Read first: `ArticlesRepository.kt`, `ArticlesViewModel.kt`, `13-permissions.md` (PERM-01), `14-background-work.md` (BG-01), `10-data/`. Start query: `codegraph_explore "ArticlesRoute ArticlesViewModel ArticlesRepository ArticlesNetworkDataSource ArticlesSyncWorker ArticlesApiService ArticlesModule"`.
 - Add an action/field: extend `ArticlesUiAction` + `ArticlesUiState`, handle in `onAction`, keep OS APIs in Route, add VM tests. Keep DTO/entity out of UiState. Never log article content (SEC-01).
 - DoD: compiles, VM tests green, new data behaviour tested at repository level, docs updated.
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `DI-02` (08-dependency-injection-hilt.md): bindings live next to the interface/impl they wire; `THR-02` (09-concurrency-and-threading.md): dispatcher access goes through DispatcherProvider; `ERR-01` (11-error-and-result-model.md): infrastructure exceptions are caught at the data-source boundary, not in the ViewModel; `UI-01` (05-presentation-udf.md): state flows down, actions flow up; `UI-02` (05-presentation-udf.md): ViewModel outcomes become state; effects only for immediate UI integration; `DS-03` (07-design-system/README.md): no raw spacing/shape literals in feature UI; `DAT-01` (10-data/preferences-datastore.md): features map the generic preferences API onto their own vocabulary; `DAT-NET-01` (10-data/network.md): feature API/DTO types stay feature-owned; generic client policy stays in :data:network; `DAT-ROOM-01` (10-data/persistence-room.md): DAO/entity types do not cross the repository mapping boundary; `DAT-CACHE-01` (10-data/cache-and-offline.md): one repository owns remote/local coordination and stale policy; `SEC-01` (12-security-and-session.md): no secret/token/PII in a log call; `PERM-01` (13-permissions.md): feature code reads PermissionState, never a raw Android permission API; only the Route touches the real API; `NAV-01` (06-navigation.md): feature code does not depend on the navigation engine; only :app does; `BG-01` (14-background-work.md): select the engine from the required delivery guarantee; `TST-01` (17-testing.md): every *ViewModel gets a unit test using MainDispatcherRule; `TST-02` (17-testing.md): stateless screens get a Compose UI test, not a mock-heavy one.

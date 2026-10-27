@@ -30,13 +30,11 @@ Explicit intentional/current violations or non-yet-satisfied states of architect
 
 **Evidence (current, source-read 2026-10-27):** `settings.gradle.kts:27-39` includes 13 modules: `:foundation`, `:app`, `:ui:designsystem`, `:runtime:concurrency`, `:data:preferences`, `:observability`, `:data:network`, `:data:database`, `:runtime:scheduling`, `:platform:navigation`, `:platform:permission`, `:security`, `:testing`. `app/build.gradle.kts:34-44,63` declares 11 `implementation(project(...))` edges plus `testImplementation(project(":testing"))`; no library module depends on `:app`. `./gradlew :app:dependencies` has not been run for the 13-module layout.
 
-**Reason:** Modules were added in Phase C and later phases (13 now) without an automated checker for DEP-01/DEP-04. `build-logic/src/main/kotlin/` holds convention plugins and the feature scaffold generator only; nothing there inspects dependency edges. Enforcement is manual.
+**Reason:** Modules were added in Phase C and later phases (13 now) without an automated checker for DEP-01/DEP-04. `build-logic/src/main/kotlin/` holds convention plugins and the feature scaffold generator only; nothing there inspects dependency edges. Enforcement was manual until lane A1 added the static checker (see Status).
 
-**Risk:** Medium — a forbidden dependency edge can be added silently and no build or CI step would fail. `:testing` also exposes four modules as `api`, so test consumers pull them transitively.
+**Risk:** Medium, reduced by A1 — before A1 a forbidden dependency edge could be added silently and no build or CI step would fail; now only an edge the text parser cannot see (for example one added by a convention plugin) escapes the check. `:testing` also exposes four modules as `api`, so test consumers pull them transitively.
 
-**Status:** **Open** — modules exist (13) and `:app` depends on them one-directionally, but no automated check enforces DEP-01/DEP-04. Exit condition: R2.1 Gradle boundary task plus forbidden-edge test passing in CI (`plan/FOUNDATION_MASTER_PLAN.md` §1.2). Manual verification via `./gradlew :app:dependencies` is NOT_RUN. (History: marked "Resolved in Phase C" when `:ui:designsystem` was added; reopened 2026-10-27 because modules existing is not boundary enforcement.)
-
-**Status check 2026-10-27:** no new build evidence (build NOT_RUN, see `reports/baseline-verification.md`). Status corrected to Open on source evidence (no boundary checker in `build-logic`); evidence text refreshed from source. Dependency-graph verification via Gradle remains NOT_RUN.
+**Status:** **Open (partially mitigated by lane A1)** — modules exist (13) and `:app` depends on them one-directionally. Mitigation (source-read; CI run NOT_RUN): `tools/check_architecture.py --boundaries-only` compares every module build file's `project(...)` edges with the allowed/test-only blocks of `dependency-rules.md` and exits 1 on a forbidden, unlisted or unparseable edge, an edge to `:app`, `:testing` in a production configuration, or a cycle; it has 16 unit tests (`tools/test_check_architecture.py`, run locally: PASS) and a mutation check on a scratch copy failed with 4 errors as intended; the repo currently shows 13 modules / 21 production edges / 0 errors. It is wired as the blocking `architecture` job in `.github/workflows/ci.yml`. Remaining exit condition: (a) one real GitHub Actions run of the `architecture` job with evidence under `reports/`, (b) optional Gradle-graph cross-check (resolved `ProjectDependency` graph; would catch edges added implicitly by convention plugins, none do today). Do not mark Resolved before (a). `./gradlew :app:dependencies` is NOT_RUN. (History: marked "Resolved in Phase C" when `:ui:designsystem` was added; reopened 2026-10-27 because modules existing is not boundary enforcement.)
 
 ### KD-03 — `android.disallowKotlinSourceSets=false` required for KSP on AGP 9
 
@@ -78,4 +76,17 @@ Explicit intentional/current violations or non-yet-satisfied states of architect
 
 **Owner/exit condition:** Remove this deviation (or rather, replace the no-op implementation with a real vendor-backed implementation behind the same interface) once an actual vendor decision is made for a real downstream app built on this foundation.
 
-**Status check 2026-10-27:** no new build evidence (build NOT_RUN, see `reports/baseline-verification.md`). Code present in `observability/` (`LoggingAnalyticsTracker`, `LoggingCrashReporter`); no vendor chosen. `:observability` has no tests. Still Open.
+**Status check 2026-10-27:** no new build evidence (build NOT_RUN, see `reports/baseline-verification.md`). Code present in `observability/` (`LoggingAnalyticsTracker`, `LoggingCrashReporter`); no vendor chosen. `:observability` now has JVM unit tests for `LoggingAnalyticsTracker`/`LoggingCrashReporter` (lane A2, `observability/src/test`; run NOT_RUN). Still Open.
+
+### KD-06 — Design-system catalog and trip showcase are gated by a runtime check, not by a debug-only source set
+
+**Rule affected:** DEC-05 (`23-decision-log.md`: "place business-specific Trip reference screens in debug `:app` showcase code"); `07-design-system/` README/`previews-and-catalog.md` describe the catalog and showcase as debug tooling.
+
+**Evidence:** `app/src/main/java/com/dc/android/foundation/MainActivity.kt:80,85-88,128-131` registers the `catalog` and `showcase` nav items and the `design-system-catalog` / `trip-showcase` routes in the main source set, guarded only by `AppEnvironmentProvider.current == AppEnvironment.DEBUG` (`config/AppEnvironmentProvider.kt:7`, reads `BuildConfig.DEBUG`). `app/src/main/java/.../showcase/trip/*` is in `src/main`, and `DesignSystemCatalog` is in `ui/designsystem/src/main/.../catalog/`. `app/build.gradle.kts:25-29` sets `optimization { enable = false }` for `release`, so nothing is stripped. Build NOT_RUN: release artifact contents not inspected.
+
+**Reason:** UNKNOWN (not recorded). The runtime gate was the simplest way to hide the entries in release; a `debug` source set or `debugImplementation` split was not done.
+
+**Risk:** Low to medium: demo screens and their trip sample data are compiled and packaged into release builds and are unreachable only while `BuildConfig.DEBUG` is false; larger APK, larger attack/maintenance surface, and a conflict with the DEC-05 wording.
+
+**Owner/exit condition:** Either move the showcase to `app/src/debug` (and keep the catalog reachable only from it), or amend DEC-05 to say "debug-gated at runtime". Natural slots: R4 (design-system registry) or R6.2 (reference app). Status: **Open**.
+

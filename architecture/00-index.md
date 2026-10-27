@@ -2,18 +2,22 @@
 
 ## Mandatory reads for any implementation task
 
-1. [`01-overview-and-invariants.md`](01-overview-and-invariants.md)
-2. [`24-ai-reading-guide.md`](24-ai-reading-guide.md)
+1. [`context-protocol.md`](context-protocol.md) (discovery sequence) and [`context-map.yaml`](context-map.yaml) (find the module/feature entry, then its page)
+2. [`01-overview-and-invariants.md`](01-overview-and-invariants.md)
+3. [`24-ai-reading-guide.md`](24-ai-reading-guide.md)
 
 ## Architecture-as-Context
 
-Navigation aids for AI agents and humans (NOT_RUN status everywhere until evidence exists; module/feature pages are created in R1.1/R1.2):
+Navigation aids for AI agents and humans (test status is NOT_RUN everywhere until evidence exists; all module and feature pages exist as `DRAFT`, written in R1.1/R1.2 and not yet audited to `VERIFIED`):
 
 - [`context-protocol.md`](context-protocol.md) - mandatory discovery sequence, refresh rules, handoff report convention
 - [`context-map.yaml`](context-map.yaml) - machine-readable pointers per module and feature
 - [`module-map.md`](module-map.md) - module table: kind, responsibility, direct deps, doc, test status
-- [`dependency-rules.md`](dependency-rules.md) - allowed/forbidden module edges (enforcement not automated; KD-02)
+- [`dependency-rules.md`](dependency-rules.md) - allowed/forbidden module edges (KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN))
+- [`modules/`](modules/app.md) (14 module pages: `app`, `build-logic`, `data-database`, `data-network`, `data-preferences`, `foundation`, `observability`, `platform-navigation`, `platform-permission`, `runtime-concurrency`, `runtime-scheduling`, `security`, `testing`, `ui-designsystem`) and [`features/`](features/articles.md) (`greeting`, `articles`, `showcase`) - one page per context-map entry
 - [`modules/TEMPLATE.md`](modules/TEMPLATE.md), [`features/TEMPLATE.md`](features/TEMPLATE.md) - page templates
+- Checker: `python3 tools/check_architecture.py` (module coverage, links, headings, entry symbols, edges vs `dependency-rules.md`)
+- ID convention: bare IDs (`PERM-01`) are architecture rules; master-plan backlog items are `MP:<ID>` ([`context-protocol.md`](context-protocol.md) section A2)
 
 ## Status
 
@@ -45,13 +49,14 @@ This tree began as a phase-by-phase implementation plan and is now a living desc
 | `22-known-deviations.md` | living document, updated every phase |
 | `23-decision-log.md` | living document, updated every phase |
 | `24-ai-reading-guide.md` | done (Phase B) |
-| everything else below | not yet created — pending its phase |
+| `context-protocol.md`, `context-map.yaml`, `module-map.md`, `dependency-rules.md`, `modules/*`, `features/*` | R1 (DRAFT, not audited) |
 
 ## Topic routing
 
 | Topic | Primary documents |
 |---|---|
-| module boundaries / imports | `02-layers-and-dependencies.md`, `03-project-structure.md` |
+| where does X live / which module or feature owns it | `context-map.yaml` (lookup by `gradle_path`, id or symbol) -> `modules/<m>.md` or `features/<f>.md`; overview in `module-map.md` |
+| module boundaries / imports | `02-layers-and-dependencies.md`, `03-project-structure.md`, `dependency-rules.md` |
 | app startup / process lifecycle | `04-app-bootstrap-and-lifecycle.md` (Phase E) |
 | ViewModel / state / events | `05-presentation-udf.md`, `11-error-and-result-model.md`, `09-concurrency-and-threading.md` (Phase E/F/H) |
 | navigation / deep links | `06-navigation.md` (Phase E) |

@@ -45,11 +45,11 @@ Refs: `putString` `:31`, `getString` `:37`, `remove` `:46`, `sharedPreferences` 
 - `:app` `di/SecurityModule.kt` (`@InstallIn(SingletonComponent)`): `provideSecureStorage(@ApplicationContext, DispatcherProvider): SecureStorage` (`@Singleton`) returns `EncryptedSharedPreferencesSecureStorage`. No Hilt in `:security`. Key alias is the library default master-key alias (not set explicitly); prefs file name is a private constant.
 
 ## 7. Edge cases, security and performance
-- SEC-01: the implementation does not log. Redaction/no-leak tests do not exist (SEC-04 PROPOSED).
+- SEC-01: the implementation does not log. Redaction/no-leak tests do not exist (MP:SEC-04 PROPOSED).
 - Failure modes seen in code: Keystore/key failure or corrupt prefs file -> reads return `null`, writes throw. No recovery, reset or key-invalidation handling exists (UNKNOWN behavior on key invalidation; not tested).
 - Backup/restore: `android:allowBackup="true"` in `app/src/main/AndroidManifest.xml`; `backup_rules.xml` / `data_extraction_rules.xml` are Android template files. Effective inclusion of `dc_foundation_secure_prefs` in backups is `UNKNOWN`; restoring an encrypted file without its Keystore key is a known Android caveat, not handled here.
 - No claim of protection on rooted/compromised devices (MP 4.9). Cost: key-store/prefs construction per call on the io dispatcher.
-- `security-crypto` 1.1.0 maintenance status is not assessed here (SEC-02 PROPOSED ADR).
+- `security-crypto` 1.1.0 maintenance status is not assessed here (MP:SEC-02 PROPOSED ADR).
 
 ## 8. Tests and evidence
 - Unit: `SecureStorageUnavailableExceptionTest` — wraps `GeneralSecurityException`; wraps `IOException`; message not lost. These test the exception class only, not storage behavior.
@@ -61,7 +61,7 @@ Refs: `putString` `:31`, `getString` `:37`, `remove` `:46`, `sharedPreferences` 
 
 ## 9. Known debt / decisions
 - KD-04 (Open): storage implemented without a real credential flow; see [`22-known-deviations.md`](../22-known-deviations.md). Related pending decision D-04 (MP 12.1).
-- Backlog (PROPOSED, MP 4.9): SEC-01 audit of lifecycle/failure modes with read/write/remove/clear/failure tests (P0); SEC-02 dependency/SDK maintenance assessment and ADR with version evidence (P1); SEC-03 optional auth/session contract only when a real feature uses it (P2); SEC-04 tests that no secret reaches logs/crash/analytics (P0). Note ID collision: these backlog IDs reuse the numbers of rules SEC-01/SEC-02 in `12-security-and-session.md` (different meaning).
+- Backlog (PROPOSED, MP 4.9): MP:SEC-01 audit of lifecycle/failure modes with read/write/remove/clear/failure tests (P0); MP:SEC-02 dependency/SDK maintenance assessment and ADR with version evidence (P1); MP:SEC-03 optional auth/session contract only when a real feature uses it (P2); MP:SEC-04 tests that no secret reaches logs/crash/analytics (P0). Bare `SEC-01`/`SEC-02` are the rules in `12-security-and-session.md`; backlog items are written `MP:<ID>` (convention in `context-protocol.md`).
 - Constraint (MP 4.9): do not swap the crypto provider or rotate keys without a migration/backup plan.
 
 ## 10. Safe extension guide
@@ -77,3 +77,4 @@ Refs: `putString` `:31`, `getString` `:37`, `remove` `:46`, `sharedPreferences` 
 ## 12. Change log and links
 - 2026-10-27 R1.1b: first DRAFT from source (base 2c0ae05). Report: [`reports/wp/R1.1b.md`](../../reports/wp/R1.1b.md).
 - Links: context-map id `security`; rules SEC-01, SEC-02, ERR-01, THR-02; KD-04; [`dependency-rules.md`](../dependency-rules.md).
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `INV-07` (01-overview-and-invariants.md): infrastructure exceptions and vendor types do not leak into presentation/public contracts; `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `DEP-03` (02-layers-and-dependencies.md): presentation does not import infrastructure implementations; `DEP-04` (02-layers-and-dependencies.md): infrastructure-specific types stay behind the owning module boundary; `THR-02` (09-concurrency-and-threading.md): dispatcher access goes through DispatcherProvider; `ERR-01` (11-error-and-result-model.md): infrastructure exceptions are caught at the data-source boundary, not in the ViewModel; `SEC-01` (12-security-and-session.md): no secret/token/PII in a log call; `SEC-02` (12-security-and-session.md): credentials/tokens are stored only through SecureStorage, never PreferencesDataSource; `BLD-03` (18-build-logic-and-dependencies.md): test utilities never enter production runtime graphs.

@@ -11,7 +11,7 @@ Semantic theme                   ui/designsystem/.../theme/DcTheme.kt
         ↓
 Reusable components               ui/designsystem/.../components/*
         ↓
-Feature UI                        app/.../MainActivity.kt
+Feature UI                        app/.../{greeting,articles,showcase}/*
 ```
 
 Feature UI expresses meaning (`MaterialTheme.colorScheme.primary`, `SpacingTokens.Medium`, `DcButton`) rather than brand implementation values (raw hex, raw `.dp` literals, Material `Button`/`Text` directly) when a semantic token/component exists.
@@ -22,7 +22,7 @@ New Gradle module `:ui:designsystem` (namespace `com.dc.android.foundation.desig
 
 - `tokens/` — `ColorTokens`, `SpacingTokens`, `ShapeTokens`, `MotionTokens`, `AccessibilityTokens`.
 - `theme/` — `DcTheme` (semantic entry point), `DcTypography`, `DcShapes`.
-- `components/` — text/button primitives plus controlled text/password input, loading/empty/error/offline states, accessible list rows and a neutral key/value detail row.
+- `components/` — **stale list (Phase C snapshot)**: text/button primitives plus controlled text/password input, loading/empty/error/offline states, accessible list rows and a neutral key/value detail row. The module now has 26 component files (menus, forms, selection, sheets, dialogs, navigation suite/drawer, pull-to-refresh, search, Coil image, and more); the current inventory is in [`../modules/ui-designsystem.md`](../modules/ui-designsystem.md) and `component-roadmap.md`.
 - `catalog/DesignSystemCatalog.kt` — manual preview catalog (light + dark).
 
 `DcTheme` is now the app-level customization seam: callers may override its Material `ColorScheme`, `Typography`, `Shapes`, extended `DcColors`, and `DcSpacing`; dynamic color is opt-in so branded apps and previews remain deterministic. `AccessibilityTokens.MinTouchTarget` remains non-overridable. `app`'s old `ui/theme/{Color,Type,Theme}.kt` were deleted; `MainActivity.kt` themes through `DcTheme`, and its debug build exposes the catalog destination.

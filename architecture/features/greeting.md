@@ -48,7 +48,7 @@ flowchart LR
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 
 ## 8. Known debt / decisions
-- KD-02 (module boundaries not enforced; Open). DEC-04 (second reference feature `articles`; greeting stays minimal). No greeting-specific KD.
+- KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN). DEC-04 (second reference feature `articles`; greeting stays minimal). No greeting-specific KD.
 - Observation: no `GreetingRoute` test; no failure-path test for preference writes.
 
 ## 9. AI playbook
@@ -57,3 +57,4 @@ flowchart LR
 - Add an action: add a `GreetingUiAction` case, handle it in the exhaustive `when` in `onAction`, add a field to `GreetingUiState` only if the screen renders it, add a VM test, then wire the Screen. Do not add a `UiEffect` for messages (UI-02).
 - DoD: compiles, `GreetingViewModelTest` green, Screen has no DI/VM import, docs updated if the contract changed.
 - Sibling features: `createFeature` scaffold (`20-feature-template.md`).
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `DI-02` (08-dependency-injection-hilt.md): bindings live next to the interface/impl they wire; `THR-02` (09-concurrency-and-threading.md): dispatcher access goes through DispatcherProvider; `ERR-01` (11-error-and-result-model.md): infrastructure exceptions are caught at the data-source boundary, not in the ViewModel; `UI-01` (05-presentation-udf.md): state flows down, actions flow up; `UI-02` (05-presentation-udf.md): ViewModel outcomes become state; effects only for immediate UI integration; `UI-03` (05-presentation-udf.md): no universal BaseViewModel; `DS-01` (07-design-system/README.md): feature UI themes through DcTheme, not raw tokens; `DS-03` (07-design-system/README.md): no raw spacing/shape literals in feature UI; `NAV-01` (06-navigation.md): feature code does not depend on the navigation engine; only :app does; `CFG-02` (16-config-feature-flags-environments.md): user configuration has one state owner and a typed mutation API; `TST-01` (17-testing.md): every *ViewModel gets a unit test using MainDispatcherRule; `TST-02` (17-testing.md): stateless screens get a Compose UI test, not a mock-heavy one.

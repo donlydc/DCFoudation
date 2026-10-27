@@ -1,0 +1,37 @@
+{
+  "summary": {
+    "error": 0,
+    "warn": 3,
+    "info": 1,
+    "modules": 14,
+    "features": 3,
+    "gradle_modules": 13,
+    "edges": 21
+  },
+  "findings": [
+    {
+      "severity": "INFO",
+      "check": "entry-symbols",
+      "subject": "module:foundation",
+      "message": "'isRetryable' declared only as val/var in foundation/src/main/kotlin/com/dc/android/foundation/core/Retryable.kt"
+    },
+    {
+      "severity": "WARN",
+      "check": "entry-symbols",
+      "subject": "module:runtime-concurrency",
+      "message": "entry symbol 'DispatcherProvider' ambiguous: declared in 2 files (runtime/concurrency/src/main/kotlin/com/dc/android/foundation/runtime/concurrency/DispatcherProvider.kt, runtime/concurrency/src/main/kotlin/com/dc/android/foundation/runtime/concurrency/DispatcherShortcuts.kt)"
+    },
+    {
+      "severity": "WARN",
+      "check": "entry-symbols",
+      "subject": "module:runtime-scheduling",
+      "message": "entry symbol 'DcJobSpec' ambiguous: declared in 3 files (runtime/scheduling/src/main/java/com/dc/android/foundation/runtime/scheduling/DcScheduler.kt, runtime/scheduling/src/main/java/com/dc/android/foundation/runtime/scheduling/work/DcJobSpec.kt, runtime/scheduling/src/main/java/com/dc/android/foundation/runtime/scheduling/work/DcWorkScheduler.kt)"
+    },
+    {
+      "severity": "WARN",
+      "check": "entry-symbols",
+      "subject": "module:data-preferences",
+      "message": "entry symbol 'PreferenceKey' ambiguous: declared in 2 files (data/preferences/src/main/java/com/dc/android/foundation/data/preferences/DataStorePreferencesDataSource.kt, data/preferences/src/main/java/com/dc/android/foundation/data/preferences/PreferenceKey.kt)"
+    }
+  ]
+}

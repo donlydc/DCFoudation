@@ -22,7 +22,7 @@ Legends for `Status:` / `Test status:` and per-fact tags: [`TEMPLATE.md`](TEMPLA
 ## 3. Dependencies and boundaries
 - Allowed: `:runtime:concurrency`, `:runtime:scheduling`, `:data:preferences`, `:observability` as `api` (current table in [`dependency-rules.md`](../dependency-rules.md)); consumers: `testImplementation(project(":testing"))` in `:app` only.
 - Forbidden: appearing in any `implementation`/`api` of production code (BLD-03); edge to `:app` (DEP-01). PROPOSED (not current rule): `:testing -> :foundation`.
-- Exceptions (DEC/KD): none for this module; KD-02 (edges unenforced, so BLD-03 is not machine-checked) in [`22-known-deviations.md`](../22-known-deviations.md).
+- Exceptions (DEC/KD): none for this module; KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN); BLD-03 is only statically checked in [`22-known-deviations.md`](../22-known-deviations.md).
 
 ## 4. Data/control flow
 ```mermaid
@@ -49,7 +49,8 @@ Not bound in Hilt and not used in `:app/.../di/`; tests construct subjects by ha
 
 ## 7. Edge cases, security and performance
 - Android-library packaging but no Android code; keep JVM-only (no Robolectric/instrumentation helpers here).
-- Drift risk: fakes re-implement production behavior by hand (`InMemoryPreferencesDataSource` vs DataStore implementation in `:data:preferences`; `FakeScheduler.scheduled()` vs `AndroidDcScheduler.scheduled()`); no shared contract test enforces parity (TST-01/TST-05, PROPOSED).
+- Reverse-direction limit: `:testing` exposes `:observability` as `api`, so `ObservabilityFakes` (`RecordingLogger`) cannot be used from `:observability`'s own tests (would be a cycle); those tests use a local `FakeLogger` (lane A2).
+- Drift risk: fakes re-implement production behavior by hand (`InMemoryPreferencesDataSource` vs DataStore implementation in `:data:preferences`; `FakeScheduler.scheduled()` vs `AndroidDcScheduler.scheduled()`); no shared contract test enforces parity (MP:TST-01, MP:TST-05, PROPOSED).
 - `FakeScheduler` keeps plain mutable lists/maps (no locking, unlike `InMemoryPreferencesDataSource`'s `Mutex` and the `Recording*` locks); fine for single-test-thread use only.
 - `RecordingLogger` stores messages and throwables in memory: test data only, never real secrets (SEC-01).
 - Pulls `junit` and `kotlinx-coroutines-test` transitively (api); must never reach a release classpath.
@@ -63,7 +64,7 @@ Not bound in Hilt and not used in `:app/.../di/`; tests construct subjects by ha
 - Last verified result: none for the current HEAD.
 
 ## 9. Known debt / decisions
-- KD-02. Backlog, all PROPOSED (MP 4.11): TST-01 fake parity with production contracts (P0); TST-02 `FakeClock`, fake permission/navigation/network only once an interface exists (P1); TST-03 Flow/state helpers and controlled scheduler, demo in `greeting`/`articles` (P1); TST-04 Compose semantics robot/fixtures, instrumentation-specific artifact if needed, `GreetingScreenTest` must execute (P1); TST-05 shared contract-test suites for storage/network/observability (P1).
+- KD-02. Backlog, all PROPOSED (MP 4.11): MP:TST-01 fake parity with production contracts (P0); MP:TST-02 `FakeClock`, fake permission/navigation/network only once an interface exists (P1); MP:TST-03 Flow/state helpers and controlled scheduler, demo in `greeting`/`articles` (P1); MP:TST-04 Compose semantics robot/fixtures, instrumentation-specific artifact if needed, `GreetingScreenTest` must execute (P1); MP:TST-05 shared contract-test suites for storage/network/observability (P1).
 - Note: turbine is already provided by `dc.testing`; no `:testing` helper uses it today.
 
 ## 10. Safe extension guide
@@ -75,9 +76,10 @@ Not bound in Hilt and not used in `:app/.../di/`; tests construct subjects by ha
 - Read -> Graph -> Propose -> Edit -> Test -> Update docs -> Handover.
 - Read: this page, `17-testing.md`, the production interface a fake mirrors.
 - Graph: `codegraph_explore "MainDispatcherRule FakeDispatcherProvider InMemoryPreferencesDataSource FakeScheduler Recording*"` for callers/tests.
-- Recipe (TST-01): write a parity test running the same assertions against the fake and the real implementation where feasible; run `./gradlew :testing:testDebugUnitTest :app:testDebugUnitTest`.
+- Recipe (MP:TST-01): write a parity test running the same assertions against the fake and the real implementation where feasible; run `./gradlew :testing:testDebugUnitTest :app:testDebugUnitTest`.
 - Done: tests with evidence under `reports/logs/`, no production config references `:testing`.
 
 ## 12. Change log and links
 - 2026-10-27 - R1.1a - first DRAFT from source at 2c0ae05 ([`reports/wp/R1.1a.md`](../../reports/wp/R1.1a.md)).
 - Links: [`context-map.yaml`](../context-map.yaml) entry `testing`; rules TST-01, TST-02, BLD-03; [`module-map.md`](../module-map.md).
+- Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `SEC-01` (12-security-and-session.md): no secret/token/PII in a log call; `BLD-03` (18-build-logic-and-dependencies.md): test utilities never enter production runtime graphs; `TST-01` (17-testing.md): every *ViewModel gets a unit test using MainDispatcherRule; `TST-02` (17-testing.md): stateless screens get a Compose UI test, not a mock-heavy one.
