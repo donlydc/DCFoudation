@@ -10,7 +10,7 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 - Role: reference (generalised by `20-feature-template.md`; the generator scaffold mirrors it)
 
 ## 2. Presentation contract (UDF — UI-01/UI-02)
-- Route (stateful): `GreetingRoute` (`GreetingRoute.kt:22`); `hiltViewModel()`, `collectAsStateWithLifecycle`, hosts `DcScaffold` + `DcSnackbarEffect`
+- Route (stateful): `GreetingRoute` (`GreetingRoute.kt:22`); `hiltViewModel()`, `collectAsStateWithLifecycle`, hosts `DcScaffold` + `DcSnackbarHostState`/`DcSnackbarHost` and the typed `DcSnackbarEffect(DcSnackbarMessage?, state, ...)` (lane C2 `64da185`; the deprecated `String?` overload is no longer used in `:app`)
 - Screen (stateless): `GreetingScreen(state, onAction, modifier)` (`GreetingScreen.kt:19`), two previews
 - ViewModel: `GreetingViewModel` (`@HiltViewModel`, extends `ViewModel()`, UI-03)
 - UiState: `GreetingUiState(message, isRefreshing=false, userMessage: String?=null)`; `userMessage` is durable until acknowledged
@@ -31,7 +31,7 @@ flowchart LR
   DS -->|lastNameIndex Flow, first() at init| Repo --> VM
   VM -->|StateFlow GreetingUiState| Screen
 ```
-- Init: if `SavedStateHandle` has no index, VM reads `lastNameIndex().first()`; a non-zero value updates `nameIndex` and `message`. Refresh: `isRefreshing=true`, advance index mod 3, persist, rebuild message, then `userMessage="Refreshed"`.
+- Init: if `SavedStateHandle` has no index, VM reads `lastNameIndex().first()`; a non-zero value updates `nameIndex` and `message`. Refresh: `isRefreshing=true`, advance index mod 3, persist, rebuild message, then `userMessage="Refreshed"` (hard-coded English string in `GreetingViewModel`, `userMessage` is still `String?`; left as a HANDOVER follow-up by lane C2).
 - Error mapping: none implemented. No call path produces `AppError`; a `PreferencesDataSource` failure in `refresh()`/`init` is not caught in the VM (ERR-01 not exercised by this feature).
 - Threading (THR-02): message built via `withContext(dispatcherProvider.default)`; no hard-coded `Dispatchers.*`. DataStore I/O threading is owned by `:data:preferences`.
 
@@ -39,7 +39,7 @@ flowchart LR
 - `Destination.Greeting` (`@Serializable data object`, `:platform:navigation`). Registered in `MainActivity.kt` `DcNavHost`: `composable<Destination.Greeting> { GreetingRoute() }`; it is the `startDestination`. NAV-01 satisfied (feature imports no `androidx.navigation`). No arguments, no deep links. Bottom/rail item id `"greeting"` (string `R.string.nav_greeting`).
 
 ## 6. Design system usage
-- `DcTheme` (provided by `DcAppRoot`), `DcScaffold`, `DcSnackbarEffect`, `DcText`, `DcButton(loading=)`, `LocalDcSpacing` (`spacing.medium/small`). No raw `.dp` or colors (DS-01/DS-03 hold). Hard-coded English strings "Refresh"/"Refreshing..." and "Refreshed" in code (not `stringResource`); DS strings policy is DEC-08.
+- `DcTheme` (provided by `DcAppRoot`), `DcScaffold`, `DcSnackbarHostState`/`DcSnackbarHost`/`DcSnackbarEffect`, `DcText`, `DcButton(loading=)`, `LocalDcSpacing` (`spacing.medium/small`). No raw `.dp` or colors (DS-01/DS-03 hold). Hard-coded English strings "Refresh"/"Refreshing..." and "Refreshed" in code (not `stringResource`); DS strings policy is DEC-08.
 
 ## 7. Tests and evidence
 - ViewModel unit test (TST-01): `app/src/test/java/com/dc/android/foundation/greeting/GreetingViewModelTest.kt` - 6 tests (initial state, Refresh advance, wrap-around, user message ack, SavedStateHandle restore, persisted-preference fallback); uses `MainDispatcherRule`, `FakeDispatcherProvider`, `NoOpLogger`, `InMemoryPreferencesDataSource` from `:testing`. Test status: NOT_RUN.

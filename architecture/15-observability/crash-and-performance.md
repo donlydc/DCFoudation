@@ -18,7 +18,7 @@ No crash-reporting (Crashlytics, Sentry) or performance-tracing vendor has been 
 
 **Verification:** `grep` for a vendor crash-reporting import (e.g. `com.google.firebase.crashlytics`, `io.sentry`) outside a future vendor-specific `CrashReporter` implementation — should be zero hits today (KD-05: no vendor chosen). Manually re-check every new `recordException(`/`log(` call site, same discipline as SEC-01's log-call review.
 
-**Exceptions/current status:** Per KD-05, the bound implementation (`LoggingCrashReporter`) is a placeholder with no real vendor backend — the contract and DI wiring are real, only the vendor is intentionally absent.
+**Exceptions/current status:** Per KD-05 (still Open), the bound implementation (`LoggingCrashReporter`) is a placeholder with no real vendor backend — the contract and DI wiring are real, only the vendor is intentionally absent. Since lane B2 `log` breadcrumbs pass through `Redactor` and `Logger` failures are swallowed (OBS-02, PROPOSED DEC-B2-2, pending Opus final review). `recordException` logs only the exception class name but still forwards the throwable to `Logger.e` (message and stack trace unredacted; HANDOVER follow-up).
 
 ## Related documents
 

@@ -41,6 +41,8 @@ Optional capabilities are explicit booleans and default to `false`:
 
 `-PfeaturePackage=com.example.app` overrides the Android namespace when needed. The generator validates Kotlin identifiers/package segments, plans every output before writing, fails if any target file already exists, and opens files with create-new semantics. Permission is the only current flag that creates `UiEffect`; other optional flags create narrowly scoped destination/API/DAO/scheduler boundaries without invented business logic.
 
+Since lane C3 (`b7487f0`) `createFeature` also writes `architecture/features/<name>.md` (DRAFT, Last source audit NOT_RUN, Test status NOT_RUN; headings identical to `features/TEMPLATE.md`, known facts filled, the rest TODO) and joins it to the same all-or-nothing existing-file check. Registering the feature in `context-map.yaml` and `module-map.md` stays a manual step (the generated page is not discoverable through the context map until then).
+
 ## Rules
 
 Governed by [`05-presentation-udf.md`](05-presentation-udf.md) (UI-01..03) and [`08-dependency-injection-hilt.md`](08-dependency-injection-hilt.md) (DI-01..04). No new rule IDs here — this document is a checklist, not a new rule source.
@@ -49,7 +51,7 @@ Governed by [`05-presentation-udf.md`](05-presentation-udf.md) (UI-01..03) and [
 
 Every `<Feature>ViewModel.kt` gets a matching test covering state transitions, using `MainDispatcherRule` and reusable infrastructure fakes from `:testing`; see `GreetingViewModelTest.kt`/`ArticlesViewModelTest.kt` for the pattern.
 
-`FeatureScaffoldGeneratorTest` verifies minimal/optional output, invalid-name rejection, and collision/no-overwrite behavior in temporary directories.
+`FeatureScaffoldGeneratorTest` verifies minimal/optional output, invalid-name rejection, and collision/no-overwrite behavior in temporary directories; lane C3 added the architecture-page content and heading-parity checks (written, NOT_RUN).
 
 ## Related documents
 

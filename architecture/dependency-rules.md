@@ -20,8 +20,8 @@
 | From | To (config) |
 |---|---|
 | `:app` | `:foundation`, `:ui:designsystem`, `:runtime:concurrency`, `:data:preferences`, `:data:network`, `:data:database`, `:observability`, `:platform:navigation`, `:platform:permission`, `:runtime:scheduling`, `:security` (all `implementation`); `:testing` (`testImplementation`) |
-| `:runtime:scheduling` | `:foundation`, `:runtime:concurrency` (`implementation`) |
-| `:data:network` | `:foundation`, `:observability` (`implementation`) |
+| `:runtime:scheduling` | `:foundation` (`api`, since lane A3 `bb5ce19`; `AppError` is in public types), `:runtime:concurrency` (`implementation`) |
+| `:data:network` | `:foundation` (`implementation`); the former unused `:observability` edge was removed in lane B1 (`7a8a804`) |
 | `:data:database` | `:runtime:concurrency` (`implementation`) |
 | `:security` | `:runtime:concurrency` (`implementation`) |
 | `:testing` | `:runtime:concurrency`, `:data:preferences`, `:observability`, `:runtime:scheduling` (`api`) |
@@ -40,7 +40,7 @@ Format: `from -> allowed targets` (production configurations). Any edge not list
 :runtime:scheduling   -> :foundation, :runtime:concurrency
 :ui:designsystem      -> (none)
 :data:preferences     -> (none)
-:data:network         -> :foundation, :observability
+:data:network         -> :foundation
 :data:database        -> :runtime:concurrency
 :platform:navigation  -> (none)
 :platform:permission  -> (none)

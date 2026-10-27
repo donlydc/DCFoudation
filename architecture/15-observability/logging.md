@@ -18,9 +18,17 @@
 
 See also SEC-01 (`12-security-and-session.md`) — never log a secret/token/PII through this interface.
 
+### Redaction safety net (lane B2, MP:SEC-04 / MP:OBS-01)
+
+`observability/.../Redactor.kt` (pure Kotlin) masks sensitive-looking map keys and secret-shaped text (Bearer/Basic, JWT, e-mail, inline `key=value`). `LoggingAnalyticsTracker` and `LoggingCrashReporter.log` apply it. It is heuristic and defence in depth only: callers still own SEC-01, `AndroidLogger` does not redact, and the Bearer/Basic pattern can produce false positives on ordinary text. Tests: `RedactorTest`, `SecretLeakAndIsolationTest` (written, NOT_RUN).
+
+### OBS-02 isolation (PROPOSED — pending Opus final review; DEC-B2-2)
+
+Telemetry is best-effort: `Logging*` swallow `Exception` thrown by the `Logger` so a failing sink never crashes the caller (`Error`s propagate). Future logger/vendor adapters follow the same rule.
+
 ## Testing / validation
 
-`GreetingViewModelTest` passes a `NoOpLogger` fake — proves `Logger` is a real constructor dependency, not a global singleton reached via `Log.d` directly.
+Lane B2 added JVM tests in `:observability` (`RedactorTest`, `SecretLeakAndIsolationTest`, `ThrowingLogger`); status NOT_RUN. `GreetingViewModelTest` passes a `NoOpLogger` fake — proves `Logger` is a real constructor dependency, not a global singleton reached via `Log.d` directly.
 
 ## Related documents
 

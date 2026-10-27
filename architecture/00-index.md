@@ -16,6 +16,8 @@ Navigation aids for AI agents and humans (test status is NOT_RUN everywhere unti
 - [`dependency-rules.md`](dependency-rules.md) - allowed/forbidden module edges (KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN))
 - [`modules/`](modules/app.md) (14 module pages: `app`, `build-logic`, `data-database`, `data-network`, `data-preferences`, `foundation`, `observability`, `platform-navigation`, `platform-permission`, `runtime-concurrency`, `runtime-scheduling`, `security`, `testing`, `ui-designsystem`) and [`features/`](features/articles.md) (`greeting`, `articles`, `showcase`) - one page per context-map entry
 - [`modules/TEMPLATE.md`](modules/TEMPLATE.md), [`features/TEMPLATE.md`](features/TEMPLATE.md) - page templates
+- Component registry (A4): [`../ui/designsystem/COMPONENTS.md`](../ui/designsystem/COMPONENTS.md) - status, tests, previews and findings per design-system component (DRAFT, NOT_RUN)
+- Lane reports and design notes: `../reports/wp/` (`B2-design.md`, `B3-design.md`, `C1-design.md`, `C3-design.md` back the PROPOSED decisions)
 - Checker: `python3 tools/check_architecture.py` (module coverage, links, headings, entry symbols, edges vs `dependency-rules.md`)
 - ID convention: bare IDs (`PERM-01`) are architecture rules; master-plan backlog items are `MP:<ID>` ([`context-protocol.md`](context-protocol.md) section A2)
 
@@ -41,13 +43,13 @@ This tree began as a phase-by-phase implementation plan and is now a living desc
 | `14-background-work.md` | periodic WorkManager sync reference implemented |
 | `15-observability/*` (4 files) | logging/analytics/crash contracts implemented; vendor/performance tracing optional |
 | `16-config-feature-flags-environments.md` | implemented environment + persisted appearance + per-app language configuration |
-| `17-testing.md` | implemented shared `:testing` kit plus feature/module tests |
+| `17-testing.md` | implemented shared `:testing` kit plus feature/module tests; per-module test inventory, all NOT_RUN |
 | `18-build-logic-and-dependencies.md` | implemented conventions and safe feature generator |
 | `19-ci-release-quality-gates.md` | done (Phase I) |
 | `20-feature-template.md` | implemented template plus `createFeature` generator |
 | `21-coding-rules.md` | done (Phase I) |
-| `22-known-deviations.md` | living document, updated every phase |
-| `23-decision-log.md` | living document, updated every phase |
+| `22-known-deviations.md` | living document, updated every phase (KD-06 proposed fix recorded; resolved-defect notes) |
+| `23-decision-log.md` | living document, updated every phase; PROPOSED lane entries (`DEC-A3-n`, `DEC-A4-1`, `DEC-B2-n`, `DEC-B3-1`, `DEC-C1-n`, `DEC-C3-1`) await Opus final review |
 | `24-ai-reading-guide.md` | done (Phase B) |
 | `context-protocol.md`, `context-map.yaml`, `module-map.md`, `dependency-rules.md`, `modules/*`, `features/*` | R1 (DRAFT, not audited) |
 

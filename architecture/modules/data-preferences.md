@@ -15,7 +15,7 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 ## 2. Context and discovery
 - Read first: `architecture/00-index.md`, `10-data/preferences-datastore.md`, `10-data/README.md`, `11-error-and-result-model.md` (ERR-01), `12-security-and-session.md` (SEC-02), `09-concurrency-and-threading.md`.
 - Main code: `data/preferences/src/main/java/com/dc/android/foundation/data/preferences/` (`PreferencesDataSource.kt:10`, `PreferenceKey.kt:7`, `PreferencesMigration.kt:4,14`, `DataStorePreferencesDataSource.kt:29`).
-- Tests: `data/preferences/src/test/.../DataStorePreferencesDataSourceTest.kt` (4 tests); fake contract test `testing/src/test/.../InMemoryPreferencesDataSourceTest.kt`.
+- Tests: `data/preferences/src/test/.../DataStorePreferencesDataSourceTest.kt` (4 tests), `PreferencesContractTest.kt` (lane B1, 11 `@Test`); fake contract test `testing/src/test/.../InMemoryPreferencesDataSourceTest.kt`.
 - Build config: `data/preferences/build.gradle.kts` (`dc.android.library`, `dc.testing`; no project deps; datastore-preferences, coroutines-core, kotlinx-serialization-json, javax-inject).
 - CodeGraph entry symbols/callers/callees: `PreferencesDataSource` (5 callers: `AppConfigurationRepository`, `DataStoreModule`, `GreetingPreferencesRepository`), `PreferenceKey` (4 callers), `PreferencesMigration.migrate` (called only from `DataStorePreferencesDataSource.ensureMigrations`).
 
@@ -40,6 +40,7 @@ Refs: `observe` `DataStorePreferencesDataSource.kt:38`; `edit` `:64`; `ensureMig
 - `set`/`remove` delegate to `edit`; `clear()` runs migrations then `dataStore.edit { clear() }`.
 - `edit(block: PreferencesEditor.() -> Unit)`: the non-suspending block records operations (Set/Remove/Clear) in a pending list; they are then applied in one `dataStore.edit` (atomic multi-key commit). Block is deliberately non-suspending (INV-05, KDoc).
 - Key kinds (sealed `PreferenceKey`): Int, Long, Float, Boolean, String, StringSet, `EnumKey` (stored as `Enum.name`; unknown name -> default), `JsonKey` (kotlinx.serialization; decode failure -> default).
+- Contract (PREF-01, KDoc on `PreferencesDataSource`, lane B1 `7a8a804`): every key carries its default; `get`/`observe` never fail for missing, malformed (enum/JSON) or unreadable (`IOException`) values and yield `key.default`; `observe` emits the current value then every change and re-emits the default after `remove`/`clear`; `set`/`remove`/`clear`/`edit` are serialized by DataStore, completed writes are visible to later reads and survive re-creating the data source over the same store; write `IOException` propagates (not swallowed).
 - Errors (ERR-01): read-path `IOException` from `dataStore.data` -> `emptyPreferences()` -> key default; other exceptions rethrown. No `AppError` is produced; no error is exposed to callers. Write-path exceptions are not caught (`edit`/`clear`), and `JsonKey` encode is not guarded.
 - Migrations: `PreferencesMigration(toVersion, migrate(editor))`; sorted by `toVersion`, applied once per instance when version key `dc_preferences_schema_version` is lower; each migration and its version bump commit in one `dataStore.edit`. `toVersion <= 0` throws `IllegalArgumentException`.
 - Threading/cancellation: no dispatcher is chosen here (DataStore does its own IO); `migrationMutex` guards migration; `migrationsApplied` is a plain `var` read inside the lock. Cancellation propagates via coroutines (no custom handling).
@@ -49,21 +50,22 @@ Refs: `observe` `DataStorePreferencesDataSource.kt:38`; `edit` `:64`; `ensureMig
 - This module has no Hilt dependency; one DataStore per file is enforced by the single `@Singleton` provider (ownership in `:app`, not in this module).
 
 ## 7. Edge cases, security and performance
-- Nothing prevents a caller from storing a secret under a `PreferenceKey`; SEC-02 forbids it by convention only (MP:PREF-03, PROPOSED review). Data is plaintext in the DataStore file.
+- Config vs secret (PREF-03, KDoc since lane B1): this is unencrypted storage for non-sensitive configuration and UI preferences only; no tokens, passwords or API keys, use `:security` primitives. Nothing technically prevents a caller from storing a secret under a `PreferenceKey`; SEC-02 forbids it by convention only. Data is plaintext in the DataStore file.
 - Whether `dc_foundation_prefs` is included in Android backup: `UNKNOWN` (`app/src/main/res/xml/backup_rules.xml`, `data_extraction_rules.xml` are template/sample files; effective policy not verified).
 - Corruption policy beyond `IOException` -> default: not defined in code. A corrupt value silently becomes the default (no log/metric).
 - Cost: each `observe` collection re-reads the `Preferences` snapshot and maps one key; first call pays the migration check (one `dataStore.data.first()`).
 
 ## 8. Tests and evidence
+- Unit (lane B1, written, NOT_RUN): `PreferencesContractTest` — defaults, round trip of all 8 key types, remove/clear, malformed JSON, `observe` with turbine, restart persistence (re-created instance over the same store), concurrent distinct-key writes, migration idempotency across instances, version gating, failed-migration recovery.
 - Unit: `DataStorePreferencesDataSourceTest` — migrations run in version order once before first read; edit commits related mutations in one update; invalid enum -> default; IO read failure -> default. `InMemoryPreferencesDataSourceTest` (in `:testing`): typed defaults and atomic edit on the fake.
 - Integration: none. Instrumented: none (0 `src/androidTest`).
 - Commands: `./gradlew :data:preferences:testDebugUnitTest`; fake: `./gradlew :testing:testDebugUnitTest`.
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 - Last verified result: none (Gradle not executed; reason in baseline Part B).
-- Not covered by any test seen: concurrent writers, restart persistence, JSON/Long/Float/StringSet round trip, migration idempotency across restart, `clear`/`remove`.
+- Not covered: PREF-04 (app consumer/wiring test) and PREF-02 legacy-data fixtures. The concurrent-write test covers distinct keys only. `:data:preferences` has no kotlin-serialization plugin, so tests use built-in serializers only. All B1 tests are uncompiled and unexecuted.
 
 ## 9. Known debt / decisions
-- No KD or DEC specific to this module. Backlog (PROPOSED, from MP 4.4): MP:PREF-01 contract + flow/restart/concurrent-write UT (P0); MP:PREF-02 migration tests and recovery policy (P1); MP:PREF-03 config-vs-secret separation review (P0); MP:PREF-04 sample wiring/lifecycle ownership consumer test (P0).
+- No KD or DEC specific to this module. Backlog (PROPOSED, from MP 4.4): MP:PREF-01 contract + flow/restart/concurrent-write UT (P0; done-in-code by lane B1, NOT_RUN); MP:PREF-02 migration tests and recovery policy (P1); MP:PREF-03 config-vs-secret separation review (P0; policy documented in KDoc by lane B1); MP:PREF-04 sample wiring/lifecycle ownership consumer test (P0).
 - Observation (not a KD): no `PreferencesMigration` implementation exists in the repo and none is wired in `DataStoreModule`; migration code path is only exercised by the unit test.
 
 ## 10. Safe extension guide
@@ -78,6 +80,7 @@ Refs: `observe` `DataStorePreferencesDataSource.kt:38`; `edit` `:64`; `ensureMig
 - Recipe: contract change => update `InMemoryPreferencesDataSource` in `:testing` and both `:app` repositories in the same change. Done = unit tests + this page + `context-map.yaml` pointers consistent.
 
 ## 12. Change log and links
+- 2026-10-27 DOC-B (lane B1 `7a8a804`): PREF-01 contract, PREF-03 policy, `PreferencesContractTest`. Report: [`reports/wp/DOC-B.md`](../../reports/wp/DOC-B.md).
 - 2026-10-27 R1.1b: first DRAFT from source (base 2c0ae05). Report: [`reports/wp/R1.1b.md`](../../reports/wp/R1.1b.md).
 - Links: context-map id `data-preferences`; rules DAT-01, ERR-01, INV-05, SEC-02; [`dependency-rules.md`](../dependency-rules.md).
 - Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `INV-05` (01-overview-and-invariants.md): no locks held while invoking external callbacks or across unsafe suspension points; `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `DEP-03` (02-layers-and-dependencies.md): presentation does not import infrastructure implementations; `DEP-04` (02-layers-and-dependencies.md): infrastructure-specific types stay behind the owning module boundary; `ERR-01` (11-error-and-result-model.md): infrastructure exceptions are caught at the data-source boundary, not in the ViewModel; `DAT-01` (10-data/preferences-datastore.md): features map the generic preferences API onto their own vocabulary; `SEC-02` (12-security-and-session.md): credentials/tokens are stored only through SecureStorage, never PreferencesDataSource; `BLD-03` (18-build-logic-and-dependencies.md): test utilities never enter production runtime graphs.

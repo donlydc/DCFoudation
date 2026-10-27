@@ -8,11 +8,11 @@ Source of truth: `settings.gradle.kts` (13 modules + `includeBuild("build-logic"
 |---|---|---|---|---|---|---|
 | `:foundation` | jvm | Android-free shared contracts: `AppError` vocabulary and retryability. | none | [foundation](modules/foundation.md) | DRAFT | NOT_RUN |
 | `:runtime:concurrency` | jvm | Dispatcher ownership, `SingleFlight`, `JobRegistry`, retry and Flow utilities. | none | [runtime-concurrency](modules/runtime-concurrency.md) | DRAFT | NOT_RUN |
-| `:runtime:scheduling` | android-library | Unified scheduler over WorkManager jobs and exact alarms (`DcScheduler`, `DcWorker`). | `:foundation`, `:runtime:concurrency` | [runtime-scheduling](modules/runtime-scheduling.md) | DRAFT | NOT_RUN |
+| `:runtime:scheduling` | android-library | Unified scheduler over WorkManager jobs and exact alarms (`DcScheduler`, `DcWorker`). | `:foundation` (api), `:runtime:concurrency` | [runtime-scheduling](modules/runtime-scheduling.md) | DRAFT | NOT_RUN |
 | `:ui:designsystem` | android-library | Tokens, semantic `DcTheme`, reusable `Dc*` components and the design-system catalog. | none | [ui-designsystem](modules/ui-designsystem.md) | DRAFT | NOT_RUN |
 | `:data:preferences` | android-library | DataStore-backed typed preferences contract (`PreferencesDataSource`, `PreferenceKey`). | none | [data-preferences](modules/data-preferences.md) | DRAFT | NOT_RUN |
 | `:data:database` | android-library | Room infrastructure: `DcDatabase`, factory, transaction runner, staleness policy. | `:runtime:concurrency` | [data-database](modules/data-database.md) | DRAFT | NOT_RUN |
-| `:data:network` | android-library | OkHttp/Retrofit factory, `NetworkResult`, HTTP error parsing. | `:foundation`, `:observability` | [data-network](modules/data-network.md) | DRAFT | NOT_RUN |
+| `:data:network` | android-library | OkHttp/Retrofit factory, `NetworkResult`, HTTP error parsing. | `:foundation` | [data-network](modules/data-network.md) | DRAFT | NOT_RUN |
 | `:platform:navigation` | android-library | Type-safe `Destination` contract (engine owned by `:app`, NAV-01). | none | [platform-navigation](modules/platform-navigation.md) | DRAFT | NOT_RUN |
 | `:platform:permission` | android-library | `PermissionState` and notification-permission helper (PERM-01). | none | [platform-permission](modules/platform-permission.md) | DRAFT | NOT_RUN |
 | `:security` | android-library | `SecureStorage` contract with EncryptedSharedPreferences implementation (SEC-02). | `:runtime:concurrency` | [security](modules/security.md) | DRAFT | NOT_RUN |

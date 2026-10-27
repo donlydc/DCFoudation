@@ -11,15 +11,15 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 
 ## 2. Presentation contract (UDF — UI-01/UI-02)
 - Files (all under `app/src/main/java/com/dc/android/foundation/articles/`): `ArticlesRoute.kt`, `ArticlesScreen.kt`, `ArticlesViewModel.kt`, `ArticlesUiState.kt`, `ArticlesUiAction.kt`, `ArticlesUiEffect.kt`; data side `ArticlesRepository.kt` (also `Article`), `ArticlesNetworkDataSource.kt`, `ArticlesApiService.kt`, `ArticleDto.kt`, `ArticlesSyncWorker.kt`, `ArticlesModule.kt`.
-- Route: `ArticlesRoute` (`ArticlesRoute.kt:32`); `hiltViewModel()`, collects state and `effects`, owns `rememberLauncherForActivityResult(RequestPermission)` (only Route touches the OS permission API, PERM-01), hosts `DcScaffold`
+- Route: `ArticlesRoute` (`ArticlesRoute.kt:32`); `hiltViewModel()`, collects state and `effects`, owns `rememberLauncherForActivityResult(RequestPermission)` (only Route touches the OS permission API, PERM-01), hosts `DcScaffold` with `DcSnackbarHostState` + `DcSnackbarHost` and the typed `DcSnackbarEffect(DcSnackbarMessage?, ...)`; resolves `userMessage` through `stringResource` (lane C2 `64da185`)
 - Screen: `ArticlesScreen(state, onAction, modifier)` (`ArticlesScreen.kt:26`); `DcContentState` + `LazyColumn` of `DcCard`; previews default and stale
 - ViewModel: `ArticlesViewModel` (`@HiltViewModel`, extends `ViewModel()`)
-- UiState (`ArticlesUiState.kt`): `ArticlesUiState(articles: List<Article>, isRefreshing, isShowingStaleData, userMessage: String?, notificationPermissionState: PermissionState = NotRequested)`
+- UiState (`ArticlesUiState.kt`): `ArticlesUiState(articles: List<Article>, isRefreshing, isShowingStaleData, userMessage: @StringRes Int?, notificationPermissionState: PermissionState = NotRequested)`
 - UiAction (`ArticlesUiAction.kt`): sealed `ArticlesUiAction` = `Refresh`, `RequestNotificationPermission`, `UserMessageShown`, `UpdateNotificationPermissionState(state)`
 - UiEffect (`ArticlesUiEffect.kt`): `ArticlesUiEffect.LaunchNotificationPermissionRequest` (BUFFERED `Channel`, `receiveAsFlow`); the only effect, Route-owned framework integration (UI-02)
 
 ## 3. DI and ownership
-- VM deps: `ArticlesRepository` (feature), `DispatcherProvider` (`:runtime:concurrency`), `Logger` + `AnalyticsTracker` (`:observability`), `SavedStateHandle` (injected but not read in `ArticlesViewModel` source).
+- VM deps: `ArticlesRepository` (feature), `DispatcherProvider` (`:runtime:concurrency`), `Logger` + `AnalyticsTracker` (`:observability`); the previously injected but unused `SavedStateHandle` was removed by lane C2 (Hilt resolves it implicitly, no DI change).
 - Repository deps: `ArticlesNetworkDataSource` (feature iface), `ArticleDao` (`:data:database`), `CrashReporter` (`:observability`).
 - Hilt: `ArticlesModule` (`ArticlesModule.kt`; `@InstallIn(SingletonComponent)`, `@Binds DefaultArticlesNetworkDataSource -> ArticlesNetworkDataSource`; DI-02). Cross-module providers in `app/.../di/`: `NetworkModule` (`@Singleton` OkHttpClient/Retrofit via `NetworkClientFactory`, `ArticlesApiService`; base URL `AppEnvironmentProvider.ARTICLES_BASE_URL`), `DatabaseModule` (`DcDatabase`, `ArticleDao`). `ArticlesSyncWorker` is `@HiltWorker`/`@AssistedInject`; `DcApplication` supplies `HiltWorkerFactory` as `Configuration.Provider`.
 - State owner: Room `ArticleDao` table is the single owner of article data; `ArticlesViewModel` holds only transient UI flags. Permission state is Route-reported into UiState.
@@ -33,26 +33,27 @@ flowchart LR
   Dao -->|observeArticles Flow| Repo -->|Flow of Article| VM -->|UiState| Screen
   Worker[ArticlesSyncWorker 15 min] -->|refresh| Repo
 ```
-- Flow: VM `init` collects `observeArticles()` (Room emits cached rows immediately). `Refresh`: `isRefreshing=true`, `withContext(io){repo.refresh()}`, then sets `isShowingStaleData=!succeeded` and a message ("Refreshed" / "Refresh failed, showing cached data"); success also tracks analytics `articles_refreshed`. Success upserts `ArticleDto.toEntity()` rows, Room re-emits; no separate apply step.
-- Worker: `DcApplication.onCreate` schedules `articles-sync` every 15 min, `DcConstraints.Network`, via `AndroidDcScheduler` (`:runtime:scheduling`). `run()` -> `repo.refresh()`; true -> best-effort notification (needs `PermissionState.Granted`, channel `articles_sync`) + `DcJobResult.Success`; false -> `Retry`; other `Throwable` -> `Failure(AppError.Unknown)`; `CancellationException` rethrown.
-- Error mapping (ERR-01/INV-07): `safeApiCall` maps IO/HTTP exceptions to `NetworkResult.Failure(AppError)` in `:data:network`. `ArticlesRepository` collapses it to `Boolean` (stale cache kept) and sends `error.cause` to `CrashReporter`; the UI sees only the stale flag and a message, never `AppError`. A Room exception from `upsertAll` is not caught in the VM (propagates in `viewModelScope`); the worker maps it to `AppError.Unknown`.
+- Flow: VM `init` collects `observeArticles()` (Room emits cached rows immediately). `Refresh`: `isRefreshing=true`, `withContext(io){repo.refresh()}`, then sets `isShowingStaleData=(error != null)` and `userMessage` = `R.string.articles_refreshed` on success or `error.toMessageRes()` on failure; success also tracks analytics `articles_refreshed`. Success upserts `ArticleDto.toEntity()` rows, Room re-emits; no separate apply step.
+- Worker: `DcApplication.onCreate` schedules `articles-sync` every 15 min, `DcConstraints.Network`, via `AndroidDcScheduler` (`:runtime:scheduling`). `run()` -> `repo.refresh() == null`; true -> best-effort notification (needs `PermissionState.Granted`, channel `articles_sync`) + `DcJobResult.Success`; false -> `Retry`; other `Throwable` -> `Failure(AppError.Unknown)`; `CancellationException` rethrown.
+- Error mapping (ERR-01/INV-07): `safeApiCall` maps IO/HTTP exceptions to `NetworkResult.Failure(AppError)` in `:data:network`. Since lane C2 `ArticlesRepository.refresh()` returns `AppError?` (null = success; stale cache kept on failure) and still sends `error.cause` to `CrashReporter`. The ViewModel maps the variant with `AppError.toMessageRes()` (`app/.../errors/AppErrorMessages.kt`, MP:CORE-03: exhaustive `when` over the 5 `AppError` variants, never renders `cause`/`serverMessage`) into a localized `@StringRes`; the UI state carries only the resource id and the stale flag, never `AppError`. A Room exception from `upsertAll` is not caught in the VM (propagates in `viewModelScope`); the worker maps it to `AppError.Unknown`.
 - Threading (THR-02): VM wraps refresh in `dispatcherProvider.io`; worker calls `refresh()` directly in `DcWorker`. Mapping `ArticleDto -> ArticleEntity -> Article` stays inside the repository (DAT-01).
 
 ## 5. Navigation entry
 - `Destination.Articles` (`:platform:navigation`); registered in `MainActivity.kt` `DcNavHost`: `composable<Destination.Articles> { ArticlesRoute() }` (NAV-01). Reached via nav-suite item id `"articles"` (`navigate(Destination.Articles)` with `popUpTo` start, `saveState/restoreState`). No arguments, no deep links.
 
 ## 6. Design system usage
-- `DcScaffold`, `DcSnackbarEffect`, `DcButton`, `DcContentState`, `DcCard`, `DcText`, `LocalDcSpacing`. No raw `.dp` (DS-03). Hard-coded English strings in Screen/VM/worker (not `stringResource`).
+- `DcScaffold`, `DcSnackbarHostState`/`DcSnackbarHost`/`DcSnackbarEffect(DcSnackbarMessage?)`, `DcButton`, `DcContentState`, `DcCard`, `DcText`, `LocalDcSpacing`. No raw `.dp` (DS-03). Screen and message strings moved to `strings.xml` (+ `values-vi`) by lane C2 (5 strings); the sync worker's notification text is not covered by that change (UNKNOWN, not re-audited).
 
 ## 7. Tests and evidence
-- ViewModel unit test (TST-01): `app/src/test/java/com/dc/android/foundation/articles/ArticlesViewModelTest.kt` - 8 tests: cached initial state, refresh success upserts + clears stale, analytics event, failure records crash exception, keeps cache + stale flag, message until ack, permission effect, permission state update. Fakes: in-file `FakeArticleDao`, `FakeArticlesNetworkDataSource`; `:testing` `RecordingAnalyticsTracker`, `RecordingCrashReporter`, `FakeDispatcherProvider`. Test status: NOT_RUN.
+- ViewModel unit test (TST-01): `app/src/test/java/com/dc/android/foundation/articles/ArticlesViewModelTest.kt` - 12 `@Test` after lane C2: cached initial state, refresh success upserts + clears stale, analytics event, failure records crash exception, keeps cache + stale flag, message until ack, refreshed message res id, `AppError` variant (Http) -> message res id, journey offline-then-online (stale cache replaced by fresh data), journey notification permission (request effect, denial -> `Denied`), permission effect, permission state update. Also `app/src/test/.../errors/AppErrorMessagesTest.kt` (3 `@Test`, covers all 5 variants). Fakes: in-file `FakeArticleDao`, `FakeArticlesNetworkDataSource`; `:testing` `RecordingAnalyticsTracker`, `RecordingCrashReporter`, `FakeDispatcherProvider`. Test status: NOT_RUN.
 - Compose UI test (TST-02): none for `ArticlesScreen`/`ArticlesRoute`. No tests for `ArticlesRepository`, `ArticlesSyncWorker`, retry/worker overlap, or transaction failure (CodeGraph: no tests within 3 hops).
 - Commands (not run): `./gradlew :app:testDebugUnitTest --tests '*ArticlesViewModelTest'`.
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 
 ## 8. Known debt / decisions
 - DEC-04 (why `articles` exists). KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN). KD-05 (analytics/crash use local no-op backends).
-- Unverified: no `INTERNET` permission found in any `AndroidManifest.xml` (only `POST_NOTIFICATIONS`); merged manifest not inspected, build NOT_RUN. Reported in R1.2 drift.
+- FIXED by lane C2 (`64da185`): the manifest lacked `android.permission.INTERNET` although `articles` performs Retrofit I/O; `INTERNET` is now declared in `app/src/main/AndroidManifest.xml` (merged manifest not inspected, build NOT_RUN).
+- Journey tests: J1 data flow (offline then online) and J2 platform (POST_NOTIFICATIONS) exist at ViewModel level (JVM, NOT_RUN). Instrumented journey tests (airplane mode toggle, `GrantPermissionRule` deny path, rotation, process death) are NOT written and NOT_RUN; the route-level launcher is not JVM-testable. Gate R6 instrumented evidence remains a blocker (no device).
 
 ## 9. AI playbook
 - Read -> Graph -> Propose -> Edit -> Test -> Update docs -> Handover.

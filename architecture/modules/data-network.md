@@ -15,14 +15,14 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 ## 2. Context and discovery
 - Read first: `architecture/00-index.md`, `10-data/network.md`, `11-error-and-result-model.md` (ERR-01), `12-security-and-session.md` (SEC-01), `09-concurrency-and-threading.md`.
 - Main code: `data/network/src/main/java/com/dc/android/foundation/data/network/` — `NetworkClientFactory.kt:16`, `NetworkClientConfig.kt:21`, `NetworkHeadersInterceptor.kt:11`, `NetworkResult.kt:19,30`, `HttpErrorBodyParser.kt:9`.
-- Tests: `data/network/src/test/.../NetworkClientFactoryTest.kt` (2), `NetworkResultTest.kt` (6); uses `okhttp-mockwebserver` (testImplementation).
-- Build config: `data/network/build.gradle.kts` (`dc.android.library`, kotlin.serialization, `dc.testing`; `implementation` of `:foundation`, `:observability`, retrofit, okhttp + logging-interceptor, kotlinx-serialization).
+- Tests: `data/network/src/test/.../NetworkClientFactoryTest.kt` (2), `NetworkResultTest.kt` (6), `NetworkErrorMappingTest.kt` (lane B1, 14 `@Test`: 12 HTTP codes, transport/serialization/cancellation/parser cases, Retrofit+MockWebServer end-to-end); uses `okhttp-mockwebserver` (testImplementation).
+- Build config: `data/network/build.gradle.kts` (`dc.android.library`, kotlin.serialization, `dc.testing`; `implementation` of `:foundation` only among project deps (the unused `:observability` edge was removed in lane B1, `7a8a804`), retrofit, okhttp + logging-interceptor, kotlinx-serialization).
 - CodeGraph entry symbols/callers/callees: `NetworkClientFactory` (callers `NetworkModule`), `safeApiCall` (caller `DefaultArticlesNetworkDataSource.fetchArticles`), `NetworkResult` (consumer `ArticlesRepository.refresh`), `HttpErrorBodyParser.parse` (called by `safeApiCall`).
 
 ## 3. Dependencies and boundaries
-- Allowed (`dependency-rules.md`): `:foundation`, `:observability`. Third-party Retrofit/OkHttp/serialization stay behind this module's API (DEP-04).
+- Allowed (`dependency-rules.md`): `:foundation`. Third-party Retrofit/OkHttp/serialization stay behind this module's API (DEP-04).
 - Forbidden: `:app` (DEP-01), `:testing` in production (BLD-03), `:ui:*`. PROPOSED only: `:data:network <-> :data:database` banned.
-- FACT/drift: `:observability` is declared `implementation` but no main or test file imports it; the only textual match is a comment in `NetworkClientConfig.kt:7`. Edge is allowed by the current table; whether it is needed is for R2.1/owner to decide.
+- RESOLVED (lane B1, `7a8a804`): the unused `:observability` edge was removed from `data/network/build.gradle.kts`, `context-map.yaml`, `dependency-rules.md` and `module-map.md`. Network logging stays OkHttp-interceptor based; this module never calls `Logger`.
 - Exceptions (DEC/KD): none. Leak note (not a recorded KD): `NetworkClientFactory`'s public signatures expose `OkHttpClient`/`Retrofit`/`Json` types; `:app` `NetworkModule` consumes them directly.
 
 ## 4. Data/control flow
@@ -42,6 +42,15 @@ Refs: `NetworkClientFactory.createOkHttpClient` `:25,29`, `createRetrofit` `:50`
 - Interceptor: adds each configured header and the request-id header only if the request lacks it (feature headers win). Logging interceptor only when `isDebug`, level `BASIC`.
 - `NetworkResult<T>`: `Success(data)` | `Failure(error: AppError)`. `safeApiCall(errorBodyParser = NoOp, block)`: `IOException` -> `AppError.Connectivity`; `HttpException` -> `AppError.Http(code, serverMessage = parser result or null, cause)` (parser exceptions swallowed via `runCatching`); `SerializationException` -> `AppError.Serialization`; any other throwable is rethrown (ERR-01).
 - `HttpErrorBodyParser.parse(ResponseBody?): String?` — must return short display-safe text; default `NoOpHttpErrorBodyParser` returns null. No `:app` code supplies a parser today (grep over `app/`).
+- Error-response contract (KDoc on `NetworkResult.kt`, lane B1; MP:NET-05):
+
+| Failure cause | Result |
+|---|---|
+| `IOException` (UnknownHost, timeout, dropped connection, any subclass) | `Failure(AppError.Connectivity)` |
+| `HttpException` (any non-2xx code, e.g. 4xx/5xx) | `Failure(AppError.Http(code, serverMessage, cause))`; `serverMessage` = parser result, or null when the parser returns null/throws |
+| `SerializationException` (malformed 2xx body) | `Failure(AppError.Serialization)` |
+| `CancellationException` and any other throwable | rethrown (ERR-01) |
+
 - Threading: `safeApiCall` is `suspend` but does not switch dispatcher; the caller owns it (`ArticlesViewModel.refresh` wraps in `withContext(dispatcherProvider.io)`). Cancellation: `CancellationException` is not caught by the three handlers, so it propagates.
 
 ## 6. DI, configuration and ownership
@@ -60,12 +69,13 @@ Refs: `NetworkClientFactory.createOkHttpClient` `:25,29`, `createRetrofit` `:50`
 - Commands: `./gradlew :data:network:testDebugUnitTest`.
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 - Last verified result: none (Gradle not executed).
-- Not covered: Retrofit end-to-end mapping with a real `ArticlesApiService`, debug-logging level, `NetworkClientConfig` validation failures, cancellation.
+- Lane B1 (`7a8a804`) added `NetworkErrorMappingTest` (written, NOT_RUN: Gradle cannot build; risk spots: Retrofit proxy over a test-nested `internal interface`, `SocketPolicy.DISCONNECT_AT_START` under `retryOnConnectionFailure(false)`).
+- Not covered: Retrofit mapping against the real `ArticlesApiService`, debug-logging level, `NetworkClientConfig` validation failures, MP:NET-02 redaction tests.
 
 ## 9. Known debt / decisions
 - No KD/DEC for this module. Backlog (PROPOSED, MP 4.6): MP:NET-01 exhaustive transport/HTTP/serialization/cancellation mapping (P0); MP:NET-02 timeouts, request id, redaction (P1); MP:NET-03 retry only for safe/idempotent ops (P1); MP:NET-04 optional auth/refresh adapter only with a real consumer (P2); MP:NET-05 API contract/KDoc/sample for error response and config (P0).
-- MP:NET-05 deliverable and acceptance (master-plan 4.6): "API contract/KDoc/sample for error response and client config", priority P0, acceptance "the `articles` sample demonstrates the integration". The master plan does not name a file; no page or KDoc currently holds it (PROPOSED location: KDoc on `NetworkResult`/`HttpErrorBodyParser`/`NetworkClientConfig` plus a short section in `10-data/network.md`; this page links to it once written). Factual note for task wording: `articles` does NOT map `NetworkResult` to `AppError` for the UI; `DefaultArticlesNetworkDataSource.fetchArticles` returns `NetworkResult` (via `safeApiCall`) and `ArticlesRepository.refresh` collapses it to `Boolean` (`Success` -> upsert, `Failure` -> `false`, with `error.cause` sent to `CrashReporter`). `AppError` is seen only inside `NetworkResult.Failure` and by `ArticlesSyncWorker`/`DcWorker`.
-- Open items: `:observability` edge appears unused (see §3); `NetworkModule` uses the `isDebug` overload rather than `NetworkClientConfig`.
+- MP:NET-05 deliverable and acceptance (master-plan 4.6): "API contract/KDoc/sample for error response and client config", priority P0, acceptance "the `articles` sample demonstrates the integration". The master plan does not name a file; no page or KDoc currently holds it (PROPOSED location: KDoc on `NetworkResult`/`HttpErrorBodyParser`/`NetworkClientConfig` plus a short section in `10-data/network.md`; this page links to it once written). MP:NET-05 delivered by lane B1 as KDoc on `NetworkResult.kt` plus the contract table in section 5. Update (lane C2, `64da185`): `ArticlesRepository.refresh()` now returns `AppError?` (null = success) instead of collapsing to `Boolean`, so the ViewModel maps the failure through `AppError.toMessageRes()`; `error.cause` is still sent to `CrashReporter`.
+- Not done: MP:NET-03 retry, MP:NET-04 auth/refresh. Open items: `NetworkModule` uses the `isDebug` overload rather than `NetworkClientConfig`.
 
 ## 10. Safe extension guide
 - New API: add the Retrofit interface, DTOs and a `*NetworkDataSource` in the feature (sample: `articles/ArticlesNetworkDataSource.kt`), wrap calls with `safeApiCall`, and map `NetworkResult` in the repository.
@@ -78,6 +88,7 @@ Refs: `NetworkClientFactory.createOkHttpClient` `:25,29`, `createRetrofit` `:50`
 - Recipe: changing `NetworkResult`/`AppError` mapping => update `ArticlesRepository` and `ArticlesViewModelTest`; run `:data:network:testDebugUnitTest` first. Done = tests + this page + context-map.
 
 ## 12. Change log and links
+- 2026-10-27 DOC-B (lane B1 `7a8a804`): `:observability` edge removed; error-response contract table; test list. Report: [`reports/wp/DOC-B.md`](../../reports/wp/DOC-B.md).
 - 2026-10-27 R1.1b: first DRAFT from source (base 2c0ae05). Report: [`reports/wp/R1.1b.md`](../../reports/wp/R1.1b.md).
 - Links: context-map id `data-network`; rules DAT-NET-01, ERR-01, SEC-01; [`dependency-rules.md`](../dependency-rules.md).
 - Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `DEP-04` (02-layers-and-dependencies.md): infrastructure-specific types stay behind the owning module boundary; `ERR-01` (11-error-and-result-model.md): infrastructure exceptions are caught at the data-source boundary, not in the ViewModel; `DAT-NET-01` (10-data/network.md): feature API/DTO types stay feature-owned; generic client policy stays in :data:network; `SEC-01` (12-security-and-session.md): no secret/token/PII in a log call; `BLD-03` (18-build-logic-and-dependencies.md): test utilities never enter production runtime graphs.

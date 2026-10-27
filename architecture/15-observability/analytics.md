@@ -18,7 +18,7 @@ No analytics vendor has been chosen yet (Firebase Analytics, Amplitude, etc.) �
 
 **Verification:** `grep` for a vendor analytics import (e.g. `com.google.firebase.analytics`, `com.amplitude`) outside a future vendor-specific `AnalyticsTracker` implementation — should be zero hits today (KD-05: no vendor chosen). Manually re-check every new `trackEvent(` call site's `properties` argument, same discipline as SEC-01's log-call review.
 
-**Exceptions/current status:** Per KD-05, the bound implementation (`LoggingAnalyticsTracker`) is a placeholder with no real vendor backend — the contract and DI wiring are real, only the vendor is intentionally absent.
+**Exceptions/current status:** Per KD-05 (still Open), the bound implementation (`LoggingAnalyticsTracker`) is a placeholder with no real vendor backend — the contract and DI wiring are real, only the vendor is intentionally absent. Since lane B2 it passes the event name and properties through `Redactor` and swallows `Logger` failures (OBS-02, PROPOSED DEC-B2-2, pending Opus final review); any vendor adapter must keep that isolation. Redaction is a safety net, not permission to pass sensitive properties.
 
 ## Related documents
 

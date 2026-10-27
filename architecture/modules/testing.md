@@ -15,7 +15,7 @@ Legends for `Status:` / `Test status:` and per-fact tags: [`TEMPLATE.md`](TEMPLA
 ## 2. Context and discovery
 - Read first: [`00-index.md`](../00-index.md), [`17-testing.md`](../17-testing.md) (TST-01, TST-02), BLD-03 in [`18-build-logic-and-dependencies.md`](../18-build-logic-and-dependencies.md), [`dependency-rules.md`](../dependency-rules.md).
 - Main code: `testing/src/main/java/com/dc/android/foundation/testing/` (5 files).
-- Tests: `testing/src/test/java/com/dc/android/foundation/testing/TestingKitTest.kt`, `InMemoryPreferencesDataSourceTest.kt`.
+- Tests: `testing/src/test/java/com/dc/android/foundation/testing/TestingKitTest.kt`, `InMemoryPreferencesDataSourceTest.kt`, `FakeSchedulerTest.kt` (added by lane A3, `bb5ce19`).
 - Build config: `testing/build.gradle.kts` (`dc.android.library`, `dc.testing`; `api` of `:runtime:concurrency`, `:data:preferences`, `:observability`, `:runtime:scheduling`, coroutines-core, coroutines-test, junit). `dc.testing` additionally adds `testImplementation` junit, coroutines-test and turbine to each module (`DcTestingConventionPlugin.kt`).
 - CodeGraph entry symbols: `MainDispatcherRule`, `FakeDispatcherProvider`, `InMemoryPreferencesDataSource`, `FakeScheduler`, `RecordingLogger`; callers: the three `:app` tests above.
 
@@ -51,17 +51,19 @@ Not bound in Hilt and not used in `:app/.../di/`; tests construct subjects by ha
 - Android-library packaging but no Android code; keep JVM-only (no Robolectric/instrumentation helpers here).
 - Reverse-direction limit: `:testing` exposes `:observability` as `api`, so `ObservabilityFakes` (`RecordingLogger`) cannot be used from `:observability`'s own tests (would be a cycle); those tests use a local `FakeLogger` (lane A2).
 - Drift risk: fakes re-implement production behavior by hand (`InMemoryPreferencesDataSource` vs DataStore implementation in `:data:preferences`; `FakeScheduler.scheduled()` vs `AndroidDcScheduler.scheduled()`); no shared contract test enforces parity (MP:TST-01, MP:TST-05, PROPOSED).
+- `FakeScheduler` does not enforce `id == DcJobSpec.name` (the real `DcScheduler` returns `Rejected` on mismatch, PROPOSED DEC-A3-3) nor idempotency/KEEP semantics, so a ViewModel test can pass against the fake and fail against the facade (MP:TST-01 parity gap).
 - `FakeScheduler` keeps plain mutable lists/maps (no locking, unlike `InMemoryPreferencesDataSource`'s `Mutex` and the `Recording*` locks); fine for single-test-thread use only.
 - `RecordingLogger` stores messages and throwables in memory: test data only, never real secrets (SEC-01).
 - Pulls `junit` and `kotlinx-coroutines-test` transitively (api); must never reach a release classpath.
 
 ## 8. Tests and evidence
-- Unit: `TestingKitTest` (2 tests: observability fakes capture calls without exposing mutable storage; `FakeDispatcherProvider` shares one dispatcher), `InMemoryPreferencesDataSourceTest` (1 test: defaults and atomic `edit`). Not tested here: `MainDispatcherRule`, `FakeScheduler` (also unused by any test), `NoOp*` objects, `clear()` paths.
+- Unit: `TestingKitTest` (2 tests: observability fakes capture calls without exposing mutable storage; `FakeDispatcherProvider` shares one dispatcher), `InMemoryPreferencesDataSourceTest` (1 test: defaults and atomic `edit`), `FakeSchedulerTest` (2 tests, A3: recorded commands / emitted state; it only uses the alarm request because work-runtime is not on this module's compile classpath). Not tested here: `MainDispatcherRule`, `NoOp*` objects, `clear()` paths. `FakeScheduler` still has no consumer outside its own test.
 - Integration: indirect, through the three `:app` unit tests listed in section 1.
 - Instrumented: none (`:app` androidTest does not use `:testing`; `app/build.gradle.kts` has only `testImplementation(project(":testing"))`).
 - Commands: `./gradlew :testing:testDebugUnitTest`; consumers `./gradlew :app:testDebugUnitTest`.
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md, Part B: Gradle blocked at daemon-toolchain provisioning)
-- Last verified result: none for the current HEAD.
+- Scratch evidence only, NOT a Gradle gate (`reports/wp/A3.md` section C): `FakeSchedulerTest` 2/2 on an out-of-repo run; the `:testing` classpath for it is NOT_RUN.
+- Last verified result: none for the current HEAD (no Gradle run).
 
 ## 9. Known debt / decisions
 - KD-02. Backlog, all PROPOSED (MP 4.11): MP:TST-01 fake parity with production contracts (P0); MP:TST-02 `FakeClock`, fake permission/navigation/network only once an interface exists (P1); MP:TST-03 Flow/state helpers and controlled scheduler, demo in `greeting`/`articles` (P1); MP:TST-04 Compose semantics robot/fixtures, instrumentation-specific artifact if needed, `GreetingScreenTest` must execute (P1); MP:TST-05 shared contract-test suites for storage/network/observability (P1).
@@ -81,5 +83,6 @@ Not bound in Hilt and not used in `:app/.../di/`; tests construct subjects by ha
 
 ## 12. Change log and links
 - 2026-10-27 - R1.1a - first DRAFT from source at 2c0ae05 ([`reports/wp/R1.1a.md`](../../reports/wp/R1.1a.md)).
+- 2026-10-27 - DOC-A - merged lane A3 delta (`bb5ce19`): `FakeSchedulerTest`, FakeScheduler parity gap.
 - Links: [`context-map.yaml`](../context-map.yaml) entry `testing`; rules TST-01, TST-02, BLD-03; [`module-map.md`](../module-map.md).
 - Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `SEC-01` (12-security-and-session.md): no secret/token/PII in a log call; `BLD-03` (18-build-logic-and-dependencies.md): test utilities never enter production runtime graphs; `TST-01` (17-testing.md): every *ViewModel gets a unit test using MainDispatcherRule; `TST-02` (17-testing.md): stateless screens get a Compose UI test, not a mock-heavy one.

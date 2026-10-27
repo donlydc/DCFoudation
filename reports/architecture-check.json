@@ -6,7 +6,7 @@
     "modules": 14,
     "features": 3,
     "gradle_modules": 13,
-    "edges": 21
+    "edges": 20
   },
   "findings": [
     {

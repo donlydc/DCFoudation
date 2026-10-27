@@ -26,7 +26,11 @@ There is deliberately **no** `Navigator`/`DcNavController` action-wrapper: the t
 
 ## Testing / validation
 
-No dedicated navigation test yet — `Destination` is a plain sealed type with no behavior to unit test beyond equality, which `data object` gives for free. Revisit if a navigation-action contract is later added with real logic.
+Tests: `DestinationTest` (lane A2) and `DestinationRoutesTest` (lane C1), both written and NOT_RUN.
+
+### D-02 — navigation depth (PROPOSED — pending Opus final review; DEC-C1-1)
+
+Lane C1 (`aca166d`) added, additively, `NavigationEffect` (`Navigate(destination)`, `Back`) and `DestinationRoutes` (`of`, `fromRoute`) to `:platform:navigation`. They are engine-neutral (NAV-01 holds: no `androidx.navigation` type). No `Navigator`/`NavController` wrapper and no deep-link table exist; argument encoding (MP:NAV-01) is deferred because no destination has arguments. No feature emits `NavigationEffect` yet and `MainActivity` still compares `X::class.qualifiedName`, which equals `DestinationRoutes.of` today. `DestinationRoutes.fromRoute` relies on a hand-maintained list of destinations.
 
 ## Related documents
 

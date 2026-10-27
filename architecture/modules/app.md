@@ -12,14 +12,14 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 ## 1. Identity and responsibility
 - Owns: the only Android application (`applicationId` = namespace `com.dc.android.foundation`), `DcApplication`, `MainActivity`, all Hilt `@Module`s that bind library implementations, the `config` package (app appearance + environment), and three reference features (`greeting`, `articles`, `showcase/trip`). `CONFIRMED_IN_CODE` (`app/build.gradle.kts`, `app/src/main/AndroidManifest.xml`)
 - Does not own: reusable UI (`:ui:designsystem`), navigation contracts (`Destination` lives in `:platform:navigation`), preferences/network/database/security/observability implementations (library modules). Not a product: reference code must stay small and business-neutral (master-plan 4.13 non-goal).
-- Public package/API: none for reuse; root package `com.dc.android.foundation` with sub-packages `di`, `config`, `greeting`, `articles`, `showcase.trip`. Nothing may depend on `:app` (DEP-01).
+- Public package/API: none for reuse; root package `com.dc.android.foundation` with sub-packages `di`, `config`, `errors`, `greeting`, `articles`, `showcase.trip`. Nothing may depend on `:app` (DEP-01).
 - Consumer(s): none (leaf of the module graph).
 
 ## 2. Context and discovery
 - Read first: `architecture/00-index.md`, `04-app-bootstrap-and-lifecycle.md`, `08-dependency-injection-hilt.md`, `16-config-feature-flags-environments.md`, `20-feature-template.md`, `05-presentation-udf.md`.
-- Main code (`app/src/main/java/com/dc/android/foundation/`): `DcApplication.kt`, `MainActivity.kt`, `di/*` (6 modules), `config/*` (7 files), `greeting/`, `articles/`, `showcase/trip/`; manifest `app/src/main/AndroidManifest.xml`; resources `app/src/main/res/` (`values`, `values-vi`, `values-night`, `resources.properties`).
+- Main code (`app/src/main/java/com/dc/android/foundation/`): `DcApplication.kt`, `MainActivity.kt`, `di/*` (6 modules), `config/*` (7 files), `errors/AppErrorMessages.kt` (lane C2, MP:CORE-03), `greeting/`, `articles/`, `showcase/trip/`; manifest `app/src/main/AndroidManifest.xml`; resources `app/src/main/res/` (`values`, `values-vi`, `values-night`, `resources.properties`).
 - Feature pages (written by R1.2, links only): [greeting](../features/greeting.md), [articles](../features/articles.md), [showcase](../features/showcase.md).
-- Tests: `app/src/test` (4 files), `app/src/androidTest` (2 files).
+- Tests: `app/src/test` (5 files, 26 `@Test` including `errors/AppErrorMessagesTest`), `app/src/androidTest` (2 files, 3 `@Test`).
 - Build config: `app/build.gradle.kts` — plugins `dc.android.application`, `dc.compose`, `kotlin.serialization`, `dc.hilt`, `dc.room`, `dc.testing`, `dc.feature.generator`; `generateLocaleConfig = true`; `release.optimization.enable = false` (R8 off, as-is).
 - CodeGraph entry symbols: `DcApplication`, `MainActivity`, `ConcurrencyModule`, `DatabaseModule`, `NetworkModule`, `AppEnvironmentProvider` (7 callers: `MainActivity`, `NetworkModule`, `ObservabilityModule`).
 
@@ -42,13 +42,13 @@ flowchart LR
 ```
 - `DcApplication.onCreate` launches on an `AppCoroutineScope(dispatcherProvider)` (no `GlobalScope`) and schedules `ArticlesSyncWorker` every 15 minutes with `DcConstraints.Network`, logging the outcome (`DcApplication.kt:56-75`). WorkManager auto-init is removed in the manifest; `DcApplication` is `Configuration.Provider` with `HiltWorkerFactory` (BG-01).
 - `MainActivity` (`AppCompatActivity`) calls `enableEdgeToEdge()` and `setContent { DcAppRoot() }`. `DcAppRoot` collects `AppConfigurationViewModel.configuration` and roots the tree in `DcTheme` (DS-01).
-- `DcNavHost` (`MainActivity.kt:74-`): start destination `Destination.Greeting`; typed routes `composable<Destination.Greeting>` / `<Destination.Articles>`; string routes `more` (settings), `design-system-catalog`, `trip-showcase`. Bottom/side items built from `DcNavigationItem`; selection uses `popUpTo(startDestination){saveState}`, `launchSingleTop`, `restoreState`. Catalog and showcase items/routes exist only when `AppEnvironmentProvider.current == DEBUG` (runtime check, same source set, so the code is compiled into release).
+- `DcNavHost` (`MainActivity.kt`): start destination `Destination.Greeting`; typed routes `composable<Destination.Greeting>` / `<Destination.Articles>`; string routes `more` (settings), `design-system-catalog`, `trip-showcase`. Bottom/side items built from `DcNavigationItem`; selection uses `popUpTo(startDestination){saveState}`, `launchSingleTop`, `restoreState`. Catalog and showcase items/routes exist only when `AppEnvironmentProvider.current == DEBUG` (runtime check, same source set, so the code is compiled into release).
 
 ## 5. Contracts
 - `AppConfiguration(themeMode: AppThemeMode, uiScale: DcUiScale, dynamicColor: Boolean)`; `AppThemeMode.resolveDarkTheme(systemDark)`; actions `AppConfigurationAction.{SetThemeMode, SetUiScale, SetDynamicColor, Reset}` (`config/AppConfiguration.kt`, `AppConfigurationViewModel.kt`).
 - `AppConfigurationRepository` (`@Singleton`): `configuration: Flow<AppConfiguration>` (combine of 3 preference flows), `setThemeMode`, `setUiScale`, `setDynamicColor`, atomic `update`, `reset` (suspend, via `PreferencesDataSource`; keys `app_theme_mode`, `app_ui_scale`, `app_dynamic_color`; defaults System / Standard / false). Main-safety is delegated to the preferences module.
 - `AppConfigurationViewModel` (`@HiltViewModel`): `configuration: StateFlow` (`stateIn` `Eagerly`, initial `AppConfiguration()`), `onAction(action)` launches in `viewModelScope`.
-- `AppLanguageController` (object, `@MainThread`): `currentLanguageTag()`, `setApplicationLanguage(tag?)`, `useSystemLanguage()` over `AppCompatDelegate`; locale is not duplicated in DataStore (DEC-07); consumed by `AppConfigurationScreen`. Locales: `values` + `values-vi` (26 strings each), `resources.properties` `unqualifiedResLocale=en`.
+- `AppLanguageController` (object, `@MainThread`): `currentLanguageTag()`, `setApplicationLanguage(tag?)`, `useSystemLanguage()` over `AppCompatDelegate`; locale is not duplicated in DataStore (DEC-07); consumed by `AppConfigurationScreen`. Locales: `values` + `values-vi` (37 strings each after lane C2), `resources.properties` `unqualifiedResLocale=en`.
 - `AppEnvironment { DEBUG, RELEASE }`, `AppEnvironmentProvider.current` (sole `BuildConfig.DEBUG` reader, CFG-01), `ARTICLES_BASE_URL` constant. No feature flags exist.
 - Features: Route (stateful, `hiltViewModel()`) -> ViewModel (`UiState`/`UiAction`) -> Screen (stateless); detail in the feature pages above.
 
@@ -68,14 +68,14 @@ Library modules are DI-framework-agnostic, so `:app` binds them (08-dependency-i
 `DcApplication` uses field injection (`HiltWorkerFactory`, `DispatcherProvider`, `Logger`) because `Application` has no injectable constructor.
 
 ## 7. Edge cases, security and performance
-- Manifest requests `POST_NOTIFICATIONS` (PERM-01, sync completion notification); `allowBackup=true` with `backup_rules.xml`/`data_extraction_rules.xml` (content of rules `UNKNOWN`, not audited here).
+- Manifest requests `INTERNET` (added by lane C2 `64da185`; it was missing although `articles` does network I/O, a defect now fixed, merged manifest not inspected) and `POST_NOTIFICATIONS` (PERM-01, sync completion notification); `allowBackup=true` with `backup_rules.xml`/`data_extraction_rules.xml` (content of rules `UNKNOWN`, not audited here).
 - `ARTICLES_BASE_URL` is a public demo endpoint (`jsonplaceholder.typicode.com`); no secrets in `app/` source (not scanned by tool). `SecureStorage` is wired but unused (KD-04).
 - Release build has `optimization.enable=false` and an empty `rules.keep`; debug-only screens are still compiled into release.
-- `ArticlesScreen.kt` hard-codes English "Showing cached data — refresh failed" (not a string resource); drift against DS string convention (DEC-08), feature-level debt.
+- `ArticlesScreen` strings now come from `strings.xml` (lane C2). Remaining hard-coded user text: Greeting's "Refreshed" message (`GreetingViewModel`) and its "Refresh"/"Refreshing..." labels (DEC-08 drift, feature-level debt).
 - Startup/perf baselines absent (MP:APP-06).
 
 ## 8. Tests and evidence
-- Unit (`app/src/test`, 19 `@Test`, never executed): `GreetingViewModelTest`, `ArticlesViewModelTest`, `AppConfigurationRepositoryTest`, `ExampleUnitTest`.
+- Unit (`app/src/test`, 26 `@Test`, never executed): `GreetingViewModelTest` (6), `ArticlesViewModelTest` (12, includes the J1/J2 journey tests), `AppConfigurationRepositoryTest` (4), `AppErrorMessagesTest` (3), `ExampleUnitTest` (1).
 - Integration: none.
 - Instrumented (`app/src/androidTest`, 3 `@Test`): `GreetingScreenTest` is compiled-only and has never been executed (no device/emulator); `ExampleInstrumentedTest` likewise not run.
 - Commands: `./gradlew :app:testDebugUnitTest`, `./gradlew :app:assembleDebug`, `./gradlew :app:connectedDebugAndroidTest` (needs emulator).
@@ -83,6 +83,7 @@ Library modules are DI-framework-agnostic, so `:app` binds them (08-dependency-i
 - Last verified result: none.
 
 ## 9. Known debt / decisions
+- MP:CORE-03 (lane C2): `AppError.toMessageRes()` maps every `AppError` variant to a localized message; `ArticlesRepository.refresh()` returns `AppError?`.
 - DEC-07 (appearance persisted in `:app`; locale via AppCompat; `config` stays in `:app` until a second consumer earns `:platform:configuration`), DEC-05 (showcase is `:app` reference code, not DS). KD-02 (Open, partially mitigated: static `tools/check_architecture.py --boundaries-only`; CI run NOT_RUN), KD-04, KD-05 (see section 6).
 - Docs vs source: `07-design-system/README.md` and DEC-05 describe the showcase as debug-only `:app` code; source gates it by runtime `AppEnvironment` in the main source set (`MainActivity.kt`). Recorded as KD-06 in `22-known-deviations.md`.
 - Backlog (PROPOSED, master-plan 4.13): MP:APP-01 verify greeting/articles/config tests (P0); MP:APP-02 run `GreetingScreenTest` on device/emulator (P0); MP:APP-03 navigation + permission journeys; MP:APP-04 missing error/offline/loading/retry/empty flows; MP:APP-05 full catalog showcase; MP:APP-06 startup/screen benchmark baselines.

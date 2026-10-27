@@ -25,7 +25,7 @@ The component set covers policies repeated by both current and expected referenc
 - **Menus & sheets (W1/W3)** — `DcDropdownMenu`, `DcOverflowMenu`, `DcTooltip`, `DcActionSheet`, `DcSelectionSheet`. Menu entries are `DcMenuItem`; destructive items use error color plus text.
 - **Selection (W1/W2)** — `DcSegmentedButton`/`DcMultiSegmentedButton`, `DcRadioGroup`, `DcCheckboxGroup` (tri-state select-all), `DcChipGroup` (`DcSelectionMode`, wrap/scroll), typed `DcDropdownField` overload. Typed choices use `DcOption<T>`; toggle policy is the pure `toggleSelection`.
 - **Forms (W2)** — `DcTextArea`, `DcFormSection`, `DcStepper`, `DcSlider`/`DcRangeSlider`, `DcOtpField`, `DcDateField` + `DcDatePickerDialog` (`java.time`; the caller formats dates). `DcTextField` gained additive `maxLength`/counter/`minLines`/`maxLines`.
-- **Feedback (W1)** — `DcInlineMessage` (tone banner), `DcLinearProgress`/`DcCircularProgress`, `DcSnackbarHostState`/`DcSnackbarHost`/`DcSnackbarMessage` and a `DcSnackbarEffect` overload; Material `SnackbarData` is not exposed.
+- **Feedback (W1)** — `DcInlineMessage` (tone banner), `DcLinearProgress`/`DcCircularProgress`, `DcSnackbarHostState`/`DcSnackbarHost`/`DcSnackbarMessage` and a `DcSnackbarEffect` overload (the legacy `String?`/`SnackbarHostState` form is `@Deprecated` since A4; use the `DcSnackbarMessage` form); Material `SnackbarData` is not exposed.
 - **Badges, tabs, toggles** — `DcBadge`/`DcBadgedBox` (`DcNavigationItem.badgeCount`), `DcTabRow`, `DcIconToggleButton`, `DcPageIndicator`, `DcAvatarSize`.
 - **Layout & lists** — `DcContentContainer` (width cap), `DcAdaptiveGrid`, `DcListAppendState`, `DcExpandableSection`, `DcButtonRow`, `DcSkeletonListRow`/`DcSkeletonCard`, `DcSkeletonSize`; `DcScaffold` accepts `floatingActionButton`.
 - **Default strings** — user-visible defaults come from `ui/designsystem/src/main/res/values/strings.xml` (`dc_*`); callers can still override every label.
@@ -38,7 +38,7 @@ Governed by [`README.md`](README.md) DS-01/DS-02. No new rule IDs here.
 
 ## Testing / validation
 
-Every public component renders in `DesignSystemCatalog`'s light/dark preview matrix. `DcContentStatePolicyTest` covers the five state-priority branches; Compose component tests live under `src/androidTest` and should run on an emulator/CI device.
+Every public composable renders in `DesignSystemCatalog`'s light/dark preview matrix after lane A4, except `DcDatePickerDialog` (indirect via `DcDateField`). `DcContentStatePolicyTest` covers the eight branch inputs (A4; Gradle NOT_RUN); the full registry is [`ui/designsystem/COMPONENTS.md`](../../ui/designsystem/COMPONENTS.md); Compose component tests live under `src/androidTest` and should run on an emulator/CI device.
 
 ## Related documents
 

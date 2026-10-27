@@ -31,6 +31,15 @@ not a replacement for an alarm that must fire at a precise wall-clock time.
   process-lifetime `AppCoroutineScope` to enqueue the 15-minute, connected unique sync work without
   blocking the main thread. The scheduling module imports no Hilt.
 
+Contract details added by lane A3 (`bb5ce19`; decisions PROPOSED — pending Opus final review, DEC-A3-3..6; Gradle NOT_RUN):
+
+- Work identity: `id` must equal `DcJobSpec.name`, else `DcScheduleOutcome.Rejected` (cancel/observe address the unique work by name).
+- Idempotency: `After` and `Every` use KEEP (first request wins; a later call still returns `Scheduled`; a changed `Every` interval/constraints is not applied); alarms are upserted by id.
+- Retry layers: `DcRetryPolicy` is OS-driven, survives process death, backoff is WorkManager's (>= 10 s, no jitter) and its ceiling is enforced in `DcWorker`; `RetryPolicy` in `:runtime:concurrency` is in-process and dies with the process. Both count `maxAttempts` as total executions; do not nest `retrying` around a `DcJobResult.Retry` path (multiplicative attempts).
+- Missed policy: `DcMissedPolicy` only affects `ExactAt`; repeating `DailyAt`/`WeeklyAt` alarms always re-arm the next occurrence on restore (pure `restoreDecision`).
+- Corrupt entries: the stored alarm list is decoded per entry; one stale entry (removed receiver class, unknown zone, bad enum) is dropped without discarding the rest.
+- Open (device/Robolectric needed): `restore()` aborts remaining alarms if one `scheduleAt` throws; no restore when exact-alarm permission is granted later (MP:SCH-04); orphan platform alarm if the store is lost.
+
 ## Rules
 
 ### BG-01 — Select the engine from the required delivery guarantee

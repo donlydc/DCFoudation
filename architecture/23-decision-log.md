@@ -8,6 +8,100 @@ Durable decisions with date, context, decision, alternatives, consequences, affe
 
 ## Entries
 
+PROPOSED entries below (`DEC-A3-n`, `DEC-A4-1`, `DEC-B2-n`, `DEC-B3-1`, `DEC-C1-n`, `DEC-C3-1`) are placeholders from lanes A3/A4/B2/B3/C1/C3 and are labelled "PROPOSED — pending Opus final review"; they are not accepted decisions and final numbers are assigned on merge.
+
+### DEC-A3-1 — 2026-10-27 — PROPOSED — `SingleFlight`: detached run on the injected scope with a per-execution supervisor (MP:CON-01)
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID; the final number is assigned on merge. Evidence is source reading plus the out-of-repo scratch JVM run (not a Gradle gate); Gradle NOT_RUN. Source: `reports/wp/A3-design.md`, code commit `bb5ce19`.
+
+**Decision:** The block runs detached on the constructor scope; the key is removed on completion. Failure reaches every awaiter and is not cached. A failing block must not cancel the caller's scope (per-execution `SupervisorJob`, completed with the execution so it never keeps a joined scope such as `runBlocking`/`coroutineScope`/`runTest` from finishing). A cancelled scope yields `CancellationException` (`putIfAbsent` plus `invokeOnCompletion` outside the map callback; pre-A3 code threw `IllegalStateException("Recursive update")`). All callers cancelling does not stop the run.
+
+**Alternatives:** ref-counted cancel when the last waiter leaves; run on the first caller.
+
+**Affected:** `runtime/concurrency/.../SingleFlight.kt`, `modules/runtime-concurrency.md`, `09-concurrency-and-threading.md`.
+
+### DEC-A3-2 — 2026-10-27 — PROPOSED — `AppCoroutineScope` ownership and shutdown; static receiver scopes (MP:CON-07)
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID; the final number is assigned on merge. Evidence is source reading plus the out-of-repo scratch JVM run (not a Gradle gate); Gradle NOT_RUN. Source: `reports/wp/A3-design.md`, code commit `bb5ce19`.
+
+**Decision:** Process-lifetime scope created once by the composition root (`DcApplication`) and never cancelled in production; tests/embedders stop it with `cancel()`; later `launch` calls are silently dropped; the uncaught-exception handler must not throw. Rule text: THR-03 (PROPOSED). Proposed deviation (no KD number yet): `DcAlarmReceiver`/`DcAlarmRestorer` keep static, class-owned scopes because receivers have no DI; bounded by `goAsync` plus a 9 s timeout; not fakeable in tests.
+
+**Alternatives:** add `close()`; Hilt `@Singleton` binding.
+
+**Affected:** `09-concurrency-and-threading.md` (THR-03), `modules/runtime-concurrency.md`, `modules/runtime-scheduling.md`, possibly `22-known-deviations.md`.
+
+### DEC-A3-3 — 2026-10-27 — PROPOSED — Work id must equal `DcJobSpec.name` (MP:SCH-01/03)
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID; the final number is assigned on merge. Evidence is source reading plus the out-of-repo scratch JVM run (not a Gradle gate); Gradle NOT_RUN. Source: `reports/wp/A3-design.md`, code commit `bb5ce19`.
+
+**Decision:** `DcScheduler` rejects a work schedule whose `id` differs from `spec.name` (`Rejected`), because `cancel(id)`/`observe(id)` address the unique work by name and `id` was previously ignored (silent cancel/observe miss).
+
+**Alternatives:** rename the spec to `id`; document only.
+
+**Affected:** `runtime/scheduling/.../DcScheduler.kt` (`identityMismatch`), `modules/runtime-scheduling.md`, `14-background-work.md`, `modules/testing.md` (`FakeScheduler` does not enforce it).
+
+### DEC-A3-4 — 2026-10-27 — PROPOSED — Idempotent enqueue: KEEP for `After`/`Every`, upsert-by-id for alarms (MP:SCH-01)
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID; the final number is assigned on merge. Evidence is source reading plus the out-of-repo scratch JVM run (not a Gradle gate); Gradle NOT_RUN. Source: `reports/wp/A3-design.md`, code commit `bb5ce19`.
+
+**Decision:** Documented current behaviour: `After` while unfinished is a no-op returning `Scheduled`; `Every` KEEP means changed interval/constraints are not applied (UPDATE unreachable through the facade, follow-up); alarm `schedule` upserts by id; changing the receiver class under one id leaves the old PendingIntent (cancel first); `DcMissedPolicy` only affects `ExactAt`.
+
+**Alternatives:** REPLACE; expose the policy on the facade.
+
+**Affected:** `modules/runtime-scheduling.md`, `14-background-work.md`.
+
+### DEC-A3-5 — 2026-10-27 — PROPOSED — Per-entry decode of the persisted alarm list (MP:SCH-03)
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID; the final number is assigned on merge. Evidence is source reading plus the out-of-repo scratch JVM run (not a Gradle gate); Gradle NOT_RUN. Source: `reports/wp/A3-design.md`, code commit `bb5ce19`.
+
+**Decision:** `DcAlarmCodec.decodeList` drops only bad entries. Pre-A3 one stale entry made it return `[]`, and the next `FileDcAlarmStore.put` overwrote every stored alarm.
+
+**Alternatives:** keep whole-list `runCatching`; quarantine file.
+
+**Affected:** `runtime/scheduling/.../alarm/DcAlarmCodec.kt`, `modules/runtime-scheduling.md`, `14-background-work.md`.
+
+### DEC-A3-6 — 2026-10-27 — PROPOSED — `RetryPolicy` (in-process) vs `DcRetryPolicy` (WorkManager) stay distinct (MP:SCH-06)
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID; the final number is assigned on merge. Evidence is source reading plus the out-of-repo scratch JVM run (not a Gradle gate); Gradle NOT_RUN. Source: `reports/wp/A3-design.md`, code commit `bb5ce19`.
+
+**Decision:** Keep both and document. `RetryPolicy`: per call, exception predicate, jittered coroutine `delay`, dies with the process. `DcRetryPolicy`: survives process death, OS-driven via `Result.retry()`, backoff >= 10 s, no jitter, ceiling enforced in `DcWorker`. Both count `maxAttempts` as total executions. Do not nest `retrying` around a `DcJobResult.Retry` path.
+
+**Alternatives:** merge; adapter.
+
+**Affected:** `modules/runtime-concurrency.md`, `modules/runtime-scheduling.md`, `14-background-work.md`.
+
+### DEC-A3-7 — 2026-10-27 — PROPOSED — `:runtime:scheduling` exposes `:foundation` as `api`
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID; the final number is assigned on merge. Evidence is source reading plus the out-of-repo scratch JVM run (not a Gradle gate); Gradle NOT_RUN. Source: `reports/wp/A3-design.md`, code commit `bb5ce19`.
+
+**Decision:** `api(project(":foundation"))` because `DcJobState.Failed`/`DcJobResult.Failure` expose `AppError` (applied in `bb5ce19`; edge set unchanged, only the configuration; HANDOVER F2 resolved). Same class of leak NOT fixed: scheduling exposes `DispatcherProvider`, `Flow`, `KSerializer`, `ListenableWorker`; `:data:network` exposes `AppError`. A general `api` vs `implementation` exposure rule still does not exist.
+
+**Alternatives:** hide `AppError`.
+
+**Affected:** `runtime/scheduling/build.gradle.kts`, `dependency-rules.md`, `context-map.yaml`, `module-map.md`.
+
+### DEC-A3-8 — 2026-10-27 — PROPOSED — `AppError` exhaustiveness and cause/`toString` policy (MP:CORE-01)
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID; the final number is assigned on merge. Evidence is source reading plus the out-of-repo scratch JVM run (not a Gradle gate); Gradle NOT_RUN. Source: `reports/wp/A3-design.md`, code commit `bb5ce19`.
+
+**Decision:** Sealed with exhaustive `when` and no `else`; sites today are `Retryable.kt` and `DcWorker.workKind`; per-variant tests. The WorkManager kind string is lossy by design (`Http` -> code 0, no cause/serverMessage). `cause` is diagnostic only, kept by reference, part of `equals`; `toString` prints it, so never log `"$error"`.
+
+**Alternatives:** stable `code` on `AppError`; redact `toString` (follow-up).
+
+**Affected:** `foundation/.../AppError.kt`, `modules/foundation.md`, `11-error-and-result-model.md`.
+
+### DEC-A4-1 — 2026-10-27 — PROPOSED — Design-system screenshot test stack (MP:UI-09, D-03)
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID. Source: `reports/wp/A4.md` section E; nothing was added to the build.
+
+**Context:** AGP 9.3.1, Kotlin 2.2.10, BOM 2026.02.01, no Robolectric/screenshot dependency in the catalog, CI without an emulator (RK-11); previews already use multi-preview annotations. Compatibility of any option with AGP 9.3.1 is UNKNOWN (plugins cannot be resolved here).
+
+**Options:** (1) Compose Preview Screenshot Testing (experimental; reuses `@Preview`; AGP 9 compatibility risk); (2) Roborazzi + Robolectric (mature JVM goldens; 3-4 new dependencies); (3) Paparazzi (lags AGP/Compose upgrades); (4) instrumented golden libraries (need an emulator in CI); (5) semantics-only, no goldens.
+
+**Recommendation:** now option 5 plus the registry; after R0 yields a green networked build, time-boxed spike of option 1 on about 5 components (`DcButton`, `DcTextField`, `DcStatusChip`, `DcListRow`, `DcContentState`, light/dark x font 1.0/2.0), falling back to option 2. Criteria: AGP/Kotlin compatibility, no-emulator CI, golden storage size, matrix size. DEC-08 "screenshot testing undecided" stands until Opus rules; MP:UI-09 stays NOT_RUN.
+
+**Affected:** `ui/designsystem/`, `07-design-system/previews-and-catalog.md`, `17-testing.md`.
+
 ### DEC-09 — 2026-10-27 — Master-plan backlog items are written `MP:<ID>`; bare IDs mean architecture rules
 
 **Context:** Master-plan backlog IDs (`plan/FOUNDATION_MASTER_PLAN.md` section 4: `PERM-01`, `TST-01`, `SEC-01`, `NAV-01`, `OBS-01`, `BLD-01..03`, `UI-01..03`) reuse the prefix and number of existing architecture rules with a different meaning. R1.1 pages and the R1.4 docs-only trial showed a task titled "PERM-01" is ambiguous.
@@ -125,3 +219,69 @@ This decision does **not** cover analytics, crash reporting, or secure storage �
 **Consequences:** NAV-01, DAT-NET-01, DAT-ROOM-01, DAT-CACHE-01, BG-01, PERM-01 rule IDs will be filled in with real rules (not "Reserved") in the phases that follow, once code backs them.
 
 **Affected:** `architecture/06-navigation.md` (NAV-01), `architecture/10-data/network.md` (DAT-NET-01), `architecture/10-data/persistence-room.md` (DAT-ROOM-01), `architecture/10-data/cache-and-offline.md` (DAT-CACHE-01), `architecture/14-background-work.md` (BG-01), `architecture/13-permissions.md` (PERM-01), `build-logic/` convention plugins, all Phase M–T implementation work.
+
+### DEC-B3-1 — 2026-10-27 — PROPOSED — D-01: move `DcDatabase`/`Article*` from `:data:database` to `:app`
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID. Source: `reports/wp/B3-design.md`, lane B3 commit `c2e7331`. Move NOT performed; Gradle NOT_RUN.
+
+**Context:** `:data:database` ships a sample `articles` schema (`DcDatabase` version 1, `ArticleEntity`, `ArticleDao`, exported `1.json`), so any importer inherits it (CLAUDE.md invariant 9). `:app` is the sole consumer; `RoomDatabaseFactory` is already schema-generic.
+
+**Decision (proposed):** Option 2, executed as a separate refactor after an ADR: move the three sources and `schemas/` to `:app`; `:data:database` keeps factory, `TransactionRunner` and `StalenessPolicy`. Until then Option 1 stands (KDoc GENERIC/SAMPLE labels applied by B3).
+
+**Alternatives:** keep as annotated sample; new `:features:articles-data` module (rejected: speculative module).
+
+**Consequences / constraints:** keep `version = 1`, table `articles`, column names, DB file `dc_foundation_db` and identity hash (diff regenerated `1.json`); preferably keep the `DcDatabase` FQCN; `:app` must apply `dc.room`/KSP (unverified); update `DatabaseModule`, `ArticlesRepository`, test fakes, context-map; own commit, rollback by revert.
+
+**Affected:** `architecture/modules/data-database.md`, `10-data/persistence-room.md`, `context-map.yaml`.
+
+### DEC-B2-1 — 2026-10-27 — PROPOSED — D-04: keep `security-crypto` behind `SecureStorage` now, Tink-based second implementation before MP:SEC-03
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID. Source: `reports/wp/B2-design.md`, lane B2 commit `8b6a6fe`. Library version/deprecation claims are from model knowledge and UNKNOWN until verified.
+
+**Decision (proposed):** Option A short term (KD-04: no credential flows, nothing to migrate). Before the first real credential (MP:SEC-03) add a Tink `Aead`/`AndroidKeysetManager` implementation as a second `SecureStorage` implementation with an explicit one-time migration (read old, write new, verify, delete old) and a backup stance (exclude the secure prefs file; a restored file without its key is treated as absent). Never swap provider or rotate keys silently. Decide before MP:SEC-03 starts.
+
+**Alternatives:** own Keystore AES-GCM adapter plus DataStore (new crypto code to own); keep indefinitely.
+
+**Lifecycle gaps for the ADR:** no `clear()`; prefs and `MasterKey` rebuilt per call; writes use `apply()`; read path maps `SecurityException` to null (done in B2).
+
+**Affected:** `modules/security.md`, `12-security-and-session.md`, KD-04.
+
+### DEC-B2-2 — 2026-10-27 — PROPOSED — OBS-02: telemetry backends swallow `Logger` failures; `Redactor` safety net
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID. Source: `reports/wp/B2-design.md`, lane B2 commit `8b6a6fe`.
+
+**Decision (proposed):** `LoggingAnalyticsTracker` and `LoggingCrashReporter` catch `Exception` (not `Throwable`) around the `Logger` call and swallow it silently, because telemetry is best-effort and must never crash the app; `Logger` implementations themselves are not wrapped; future vendor adapters (MP:OBS-04) follow the same rule. `Redactor` (pure Kotlin, in `:observability`) is applied by `Logging*` as a heuristic SEC-01 safety net; callers still own SEC-01.
+
+**Consequences:** failures are invisible (no secondary channel); Bearer/Basic false positives and free-text false negatives are possible; `LoggingCrashReporter` still forwards the throwable to `Logger.e`.
+
+**Affected:** `modules/observability.md`, `15-observability/*`, KD-05 (stays Open).
+
+### DEC-C1-1 — 2026-10-27 — PROPOSED — D-02: minimal navigation contract (`NavigationEffect` + `DestinationRoutes`)
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID. Source: `reports/wp/C1-design.md`, lane C1 commit `aca166d`.
+
+**Decision (proposed):** keep navigation depth minimal: an engine-neutral `NavigationEffect {Navigate, Back}` plus `DestinationRoutes` (stable route naming, round trip) in `:platform:navigation`. No `Navigator`/`NavController` wrapper and no deep-link table until a second consumer navigates from a ViewModel. Argument encoding (MP:NAV-01) deferred: no destination has arguments.
+
+**Alternatives:** status quo (Destination only); full `Navigator` interface plus fake plus deep-link table (rejected for now).
+
+**Affected:** `modules/platform-navigation.md`, `06-navigation.md`.
+
+### DEC-C1-2 — 2026-10-27 — PROPOSED — MP:PERM-02 shape: additive `PermissionStatus` and lifecycle-free `PermissionRequester`
+
+**Status: PROPOSED — pending Opus final review.** Placeholder ID. Source: `reports/wp/C1-design.md`, lane C1 commit `aca166d`.
+
+**Decision (proposed):** add `PermissionStatus` (5 cases) with a pure resolver, a suspend `PermissionRequester` (`check`/`request`), `PermissionRequestTracker` and `FakePermissionRequester`, leaving the 3-state `PermissionState` untouched. The Flow-based observer and the Activity-bound implementation are deferred to `:app` glue.
+
+**Consequences:** `FakePermissionRequester` lives in the main source set because `:platform:permission` may not depend on `:testing` (follow-up); the `compose`/`activity-compose` build dependencies were removed.
+
+**Affected:** `modules/platform-permission.md`, `13-permissions.md`.
+
+### DEC-C3-1 — 2026-10-27 — PROPOSED — D-05: publishing model, versioning and API-compatibility policy
+
+**Status: PROPOSED — pending Opus final review (and user answers).** Placeholder ID. Source: `reports/wp/C3-design.md`, lane C3 commit `b7487f0`. Nothing is published; no `maven-publish` block exists.
+
+**Decision (proposed):** Option A now (composite build / git submodule via `includeBuild`, no publishing config); trigger for Option B (internal Maven repository plus a `dc-foundation-bom`) is the first consumer in another repository that cannot track foundation HEAD. SemVer per module set via a lock-step BOM, `0.y.z` until modules pass their gate and have multi-consumer evidence; `build-logic` versioned separately in practice (AGP/Gradle coupling). Publish only `maturity >= beta` modules; `:app` is never published. Deprecation: `@Deprecated` with `ReplaceWith` plus CHANGELOG line, at least one MINOR (or 30 days) at WARNING, then ERROR, removal only in a MAJOR. Binary-compatibility-validator (`apiCheck`) adopted only when Option B is triggered.
+
+**Open questions for the user:** an external consumer and hosting; lock-step BOM acceptable; a 1.0 target date.
+
+**Affected:** `modules/build-logic.md`, `README.md`/`CHANGELOG.md`, future `19-ci-release-quality-gates.md`.

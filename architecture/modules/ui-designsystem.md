@@ -18,10 +18,11 @@ Test status: NOT_RUN (evidence: reports/baseline-verification.md)
 ## 2. Context and discovery
 - Read first: `architecture/00-index.md`, `architecture/07-design-system/README.md` (DS-01..04), then the one sub-doc for the concern (`tokens.md`, `semantic-theme.md`, `components.md`, `previews-and-catalog.md`, `component-roadmap.md`). DECs: DEC-05..08 in `architecture/23-decision-log.md`.
 - Main code (`ui/designsystem/src/main/java/.../designsystem/`):
-  - `tokens/` (7 files): `ColorTokens`, `SpacingTokens`, `DcSpacing` (+ `LocalDcSpacing`), `ShapeTokens`, `MotionTokens`, `SurfaceTokens`, `AccessibilityTokens` (`MinTouchTarget`).
+  - `tokens/` (7 files): `ColorTokens`, `SpacingTokens`, `DcSpacing` (+ `LocalDcSpacing`), `ShapeTokens`, `MotionTokens`, `SurfaceTokens.kt` (declares `ElevationTokens` and `StrokeTokens`, not a `SurfaceTokens` object), `AccessibilityTokens` (`MinTouchTarget`).
   - `theme/` (5 files): `DcTheme` (+ `DcThemeDefaults`), `DcColors` (extended success/warning/info/offline roles, `LocalDcColors`), `DcTypography`, `DcShapes`, `DcUiScale`.
   - `components/` (26 files, grouped below), `catalog/` (`DesignSystemCatalog.kt`, `ExtendedCatalog.kt`), `preview/DcPreviews.kt`, `res/values/strings.xml`.
 - Tests: `src/test` (5 files), `src/androidTest` (2 files); see section 8.
+- Registry: [`ui/designsystem/COMPONENTS.md`](../../ui/designsystem/COMPONENTS.md) (A4, commit `17b4703`): every public symbol (133), exclusions, overlaps, findings F/C/G/H, usage/preview/test guide. Status DRAFT, everything NOT_RUN.
 - Build config: `ui/designsystem/build.gradle.kts` — plugins `dc.android.library`, `dc.compose`, `dc.testing`; external deps: Material icons core, Material3 adaptive navigation-suite, Coil compose + okhttp, Compose UI test (androidTest).
 - CodeGraph entry symbols: `DcTheme`, `DcUiScale` (callers: `AppConfiguration*`, `MainActivity`), `DcContentState` (caller: `articles/ArticlesScreen.kt`), `DesignSystemCatalog` (caller: `MainActivity` debug route), `DcNavigationSuite` (caller: `MainActivity`).
 
@@ -44,7 +45,7 @@ flowchart LR
 ## 5. Contracts
 - Layers: components read semantics from `MaterialTheme.*`, `LocalDcSpacing`, `LocalDcColors`; feature code must not import `tokens.ColorTokens`/`DcTypography` (DS-01) or use raw `.dp`/`RoundedCornerShape` literals (DS-03).
 - `DcUiScale` (DEC-07): enum `Compact` 0.90 / `Standard` 1.00 / `Comfortable` 1.10. `applyTo(DcSpacing)` scales xSmall..xxLarge and `component`; `applyTo(Typography)` scales fontSize and lineHeight of all 15 styles. The 48dp touch floor (`AccessibilityTokens.MinTouchTarget`, DS-02) and system font scale are not changed. Apply once at the app-level `DcTheme`, never per screen. `applyTo` is `internal`.
-- Component groups by file (names only; the full registry is the future `ui/designsystem/COMPONENTS.md`, MP:UI-01 / R4, not yet created):
+- Component groups by file (names only; the full registry is [`ui/designsystem/COMPONENTS.md`](../../ui/designsystem/COMPONENTS.md), MP:UI-01, created by lane A4 as a DRAFT):
 
 | File(s) | Group (sample symbols) |
 |---|---|
@@ -58,7 +59,9 @@ flowchart LR
 | `DcNavigationSuite`, `DcNavigationDrawer`, `DcAsyncImage` | adaptive nav shell (`DcNavigationItem`); drawer; Coil-backed image/avatar |
 
 - `DcContentState<T>` is a presentation helper (Loading/Empty/Error/Content branch via `resolveDcContentStateBranch`), not a cache policy. Dialog/sheet visibility is caller-owned (DEC-05). Errors arrive as caller-mapped messages, not exceptions. No suspend or blocking work in the module; all composables run on the main thread.
-- Catalog/preview: `DesignSystemCatalog()` (scrollable, light/dark) + `ExtendedCatalogSections()`; `DcThemePreviews`, `DcFontScalePreviews`, `DcWindowPreviews`. Manual catalog, no screenshot tooling (DEC-08: undecided). DS-04 coverage of every public composable is `DOCUMENTED_ONLY`, not machine-checked.
+- Catalog/preview: `DesignSystemCatalog()` (scrollable, light/dark) + `ExtendedCatalogSections()`; `DcThemePreviews`, `DcFontScalePreviews`, `DcWindowPreviews`. Manual catalog, no screenshot tooling (DEC-08: undecided; recommendation PROPOSED as DEC-A4-1). After A4 every public composable has a catalog example except `DcDatePickerDialog` (exercised only through `DcDateField`); A4 added `DcButton` slot, `DcListRow` slot and `DcMultiSegmentedButton`. DS-04 coverage is now checkable against the registry but is not machine-checked.
+- Public surface (A4 scan, 133 symbols): components 113 (81 composable declarations / 75 names, 16 enums, 6 data classes, 5 `*Defaults` objects, 4 pure helpers, `DcSnackbarHostState`), theme 7, tokens 9, catalog 1, preview 3. Status proposals (PROPOSED, Opus to confirm): STABLE 55 / EXPERIMENTAL 77 / DEPRECATED 1. 22 private `@Preview` functions. `:app` references 29 symbols; 100 of 133 have no `:app` reference.
+- A4 contract changes (additive, source-compatible, Compose code uncompiled): legacy `DcSnackbarEffect(String?, SnackbarHostState, ...)` is `@Deprecated(level = WARNING)`; `DcToggleRow` role follows `DcToggleControl` (Checkbox/Switch/RadioButton); `DcSearchBar` clear action uses `DcButton(Text)` (48dp floor, DS-02); `DcContentState` stale-content progress indicator has a `contentDescription`; OTP border uses `StrokeTokens.Hairline`.
 
 ## 6. DI, configuration and ownership
 - No Hilt, no `@Module`, no singletons in this module (DS is pure Compose). Consumers construct nothing; they call composables.
@@ -72,21 +75,21 @@ flowchart LR
 - `DcNavigationSuite` enforces supported item count (`requireSupportedNavigationItemCount`, unit-tested).
 
 ## 8. Tests and evidence
-- Unit (`src/test`, 27 `@Test`, never executed): `DcContentStatePolicyTest`, `DcNavigationSuiteTest`, `DcWidgetPolicyTest` (components); `DcThemeTokensTest`, `DcUiScaleTest` (theme).
+- Unit (`src/test`, 30 `@Test` after lane A4, never executed): `DcContentStatePolicyTest` (8, was 5), `DcNavigationSuiteTest`, `DcWidgetPolicyTest` (components); `DcThemeTokensTest`, `DcUiScaleTest` (theme).
 - Integration: none.
-- Instrumented (`src/androidTest`, 19 `@Test`, compiled-only/never executed; no device): `DcComponentsTest`, `DcWidgetsTest`.
+- Instrumented (`src/androidTest`, 21 `@Test` after A4 (+2: `typedSnackbarAcknowledgesOneMessageOnce`, `switchToggleRowExposesSwitchRole`), never executed; no device): `DcComponentsTest`, `DcWidgetsTest`.
 - Commands: `./gradlew :ui:designsystem:testDebugUnitTest`, `./gradlew :ui:designsystem:compileDebugKotlin` (previews/catalog compile), `./gradlew :ui:designsystem:connectedDebugAndroidTest` (needs emulator).
 - Test status: NOT_RUN (evidence: reports/baseline-verification.md; Gradle blocked at toolchain 25 and AGP plugin resolution, Part B)
 - Last verified result: none. No screenshot/golden tests exist.
 
 ## 9. Known debt / decisions
 - DEC-05 (delta over existing DS, `Dc` prefix kept), DEC-06 (promote primitives, not domain screens), DEC-07 (UI scale at root theme), DEC-08 (widget set + module string defaults).
-- Legacy Material-typed API kept for source compatibility alongside DEC-08 typed models: `DcSnackbarEffect(message: String?, SnackbarHostState, ...)` in `DcFeedbackComponents.kt` vs `DcSnackbarEffect(DcSnackbarMessage?, DcSnackbarHostState, ...)` in `DcMessageComponents.kt`; two `DcDropdownField` overloads in `DcDropdownField.kt` and `DcSelectionComponents.kt`. `CONFIRMED_IN_CODE`.
-- Backlog (PROPOSED, from master-plan 4.12; none started): MP:UI-01 component registry `COMPONENTS.md`; MP:UI-02 semantic token contract + `DcUiScale` accessibility snapshots; MP:UI-03 normalize buttons/inputs/forms/selection/lists/menus; MP:UI-04 feedback/overlay ownership tests; MP:UI-05 `DcContentState` state permutations incl. offline/refreshing; MP:UI-06 adaptive/insets demo; MP:UI-07 expandable card, date range, timeline, data table (only if consumer proves need); MP:UI-08 diagnostics widgets as optional extension; MP:UI-09 screenshot/semantics/recomposition tests; MP:UI-10 per-component usage docs.
+- Legacy Material-typed API kept for source compatibility alongside DEC-08 typed models (the first `DcSnackbarEffect` below is `@Deprecated` since A4; `GreetingRoute`/`ArticlesRoute` still call it, so `:app` shows two deprecation warnings until migrated; no `allWarningsAsErrors` found): `DcSnackbarEffect(message: String?, SnackbarHostState, ...)` in `DcFeedbackComponents.kt` vs `DcSnackbarEffect(DcSnackbarMessage?, DcSnackbarHostState, ...)` in `DcMessageComponents.kt`; two `DcDropdownField` overloads in `DcDropdownField.kt` and `DcSelectionComponents.kt`. `CONFIRMED_IN_CODE`.
+- Backlog (master-plan 4.12), status after lane A4 (`17b4703`, all NOT_RUN): MP:UI-01 component registry `COMPONENTS.md` done (DRAFT); MP:UI-02..05, MP:UI-09, MP:UI-10 audited, findings recorded in COMPONENTS.md section 6 (`DcContentState` branches now pinned by 8 policy tests, MP:UI-05 partial); the rest PROPOSED and not started. Unfixed on purpose (visual/owner decision or needs a compiler): colour contrast F-01..F-03 (outline vs surface 1.47:1 light / 1.74:1 dark, light `onSuccess` on `success` 3.30:1, light `onSurfaceVariant` on `surfaceVariant` 4.35:1; measured offline with a WCAG script, not a test), `DcAlertDialog` vs `DcInfoDialog`, typed `DcDropdownField` keyed by label, sheet swipe guard, `DcSnackbarHostState.current` single-slot race, stale-banner retry. Also: `DcColors.offline/onOffline` unused by any component; `SpacingTokens` is an unscaled duplicate of `DcSpacing`; 7 of 23 `dc_*` strings unreferenced. Original list: MP:UI-02 semantic token contract + `DcUiScale` accessibility snapshots; MP:UI-03 normalize buttons/inputs/forms/selection/lists/menus; MP:UI-04 feedback/overlay ownership tests; MP:UI-05 `DcContentState` state permutations incl. offline/refreshing; MP:UI-06 adaptive/insets demo; MP:UI-07 expandable card, date range, timeline, data table (only if consumer proves need); MP:UI-08 diagnostics widgets as optional extension; MP:UI-09 screenshot/semantics/recomposition tests; MP:UI-10 per-component usage docs.
 - No KD currently scoped to this module.
 
 ## 10. Safe extension guide
-- Add a component: put it in the matching `components/Dc*Components.kt` group (or a new focused file), take `modifier`, state-hoisted `value`/`onChange`, `enabled`, semantic variant enum; use `LocalDcSpacing`/`MaterialTheme`; default labels via `dc_*` string resources; add a catalog section and a preview (DS-04); add a policy test for non-trivial logic. Update `07-design-system/components.md` (and COMPONENTS.md once UI-01 exists).
+- Add a component: put it in the matching `components/Dc*Components.kt` group (or a new focused file), take `modifier`, state-hoisted `value`/`onChange`, `enabled`, semantic variant enum; use `LocalDcSpacing`/`MaterialTheme`; default labels via `dc_*` string resources; add a catalog section and a preview (DS-04); add a policy test for non-trivial logic. Update `07-design-system/components.md` and `ui/designsystem/COMPONENTS.md`.
 - Add a token: `tokens/` first, then expose through `DcTheme` defaults; do not let feature code read the token file.
 - Do not add `project(...)` deps, domain models, Retrofit/Room/DataStore, or expose Coil/Material adaptive types.
 - Sample consumers: `articles/ArticlesScreen.kt` (`DcContentState`, `DcCard`, `DcButton`), `MainActivity.kt` (`DcTheme`, `DcNavigationSuite`), `showcase/trip/*` (DEC-06 composition).
@@ -100,5 +103,6 @@ flowchart LR
 
 ## 12. Change log and links
 - 2026-10-27 — R1.1d — first DRAFT from source; report `reports/wp/R1.1d.md`.
-- Links: `architecture/context-map.yaml` (`ui-designsystem`), `architecture/dependency-rules.md`, `architecture/07-design-system/`, `architecture/modules/app.md`, future `ui/designsystem/COMPONENTS.md` (PROPOSED, MP:UI-01).
+- 2026-10-27 — DOC-A — merged lane A4 delta (`17b4703`, `reports/wp/A4.md`): registry pointer, token file names, test counts, deprecation, findings. Doc stays DRAFT; tests NOT_RUN.
+- Links: `architecture/context-map.yaml` (`ui-designsystem`), `architecture/dependency-rules.md`, `architecture/07-design-system/`, `architecture/modules/app.md`, `ui/designsystem/COMPONENTS.md` (A4 registry, DRAFT).
 - Rule glosses (text lives in the named doc; gloss only, the rule doc is authoritative): `INV-08` (01-overview-and-invariants.md): design-system consumers use semantic tokens/components, not duplicated brand constants; `DEP-01` (02-layers-and-dependencies.md): core/base modules do not depend on feature implementation (or on :app); `DEP-02` (02-layers-and-dependencies.md): a feature does not import another feature's private implementation; `DEP-03` (02-layers-and-dependencies.md): presentation does not import infrastructure implementations; `UI-01` (05-presentation-udf.md): state flows down, actions flow up; `DS-01` (07-design-system/README.md): feature UI themes through DcTheme, not raw tokens; `DS-02` (07-design-system/README.md): interactive components enforce the accessibility floor centrally; `DS-03` (07-design-system/README.md): no raw spacing/shape literals in feature UI.

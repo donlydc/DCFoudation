@@ -14,15 +14,15 @@ Reusable components               ui/designsystem/.../components/*
 Feature UI                        app/.../{greeting,articles,showcase}/*
 ```
 
-Feature UI expresses meaning (`MaterialTheme.colorScheme.primary`, `SpacingTokens.Medium`, `DcButton`) rather than brand implementation values (raw hex, raw `.dp` literals, Material `Button`/`Text` directly) when a semantic token/component exists.
+Feature UI expresses meaning (`MaterialTheme.colorScheme.primary`, `LocalDcSpacing.current.medium`, `DcButton`) rather than brand implementation values (raw hex, raw `.dp` literals, Material `Button`/`Text` directly) when a semantic token/component exists.
 
 ## Current implementation (Phase C)
 
 New Gradle module `:ui:designsystem` (namespace `com.dc.android.foundation.designsystem`), depended on by `:app`. Contains:
 
-- `tokens/` — `ColorTokens`, `SpacingTokens`, `ShapeTokens`, `MotionTokens`, `AccessibilityTokens`.
-- `theme/` — `DcTheme` (semantic entry point), `DcTypography`, `DcShapes`.
-- `components/` — **stale list (Phase C snapshot)**: text/button primitives plus controlled text/password input, loading/empty/error/offline states, accessible list rows and a neutral key/value detail row. The module now has 26 component files (menus, forms, selection, sheets, dialogs, navigation suite/drawer, pull-to-refresh, search, Coil image, and more); the current inventory is in [`../modules/ui-designsystem.md`](../modules/ui-designsystem.md) and `component-roadmap.md`.
+- `tokens/` — `ColorTokens`, `SpacingTokens`, `DcSpacing` (+ `LocalDcSpacing`), `ShapeTokens`, `MotionTokens`, `SurfaceTokens.kt` (`ElevationTokens`, `StrokeTokens`), `AccessibilityTokens`.
+- `theme/` — `DcTheme` (semantic entry point), `DcColors`, `DcTypography`, `DcShapes`, `DcUiScale`.
+- `components/` — the module has 26 component files with 113 public symbols (81 composable declarations), listed with status, tests, previews and findings in the registry [`ui/designsystem/COMPONENTS.md`](../../ui/designsystem/COMPONENTS.md) (A4, DRAFT, NOT_RUN); group overview in [`../modules/ui-designsystem.md`](../modules/ui-designsystem.md), widget roadmap in `component-roadmap.md`.
 - `catalog/DesignSystemCatalog.kt` — manual preview catalog (light + dark).
 
 `DcTheme` is now the app-level customization seam: callers may override its Material `ColorScheme`, `Typography`, `Shapes`, extended `DcColors`, and `DcSpacing`; dynamic color is opt-in so branded apps and previews remain deterministic. `AccessibilityTokens.MinTouchTarget` remains non-overridable. `app`'s old `ui/theme/{Color,Type,Theme}.kt` were deleted; `MainActivity.kt` themes through `DcTheme`, and its debug build exposes the catalog destination.
@@ -49,7 +49,7 @@ Read only the subdocument for the concern being changed.
 
 ### DS-03 — No raw spacing/shape literals in feature UI
 
-**Rule:** Feature UI uses `SpacingTokens`/`ShapeTokens` (or the semantic `DcShapes` inside `MaterialTheme`), not raw `.dp`/`RoundedCornerShape(...)` literals.
+**Rule:** Feature UI uses `LocalDcSpacing.current` (the only spacing that DEC-07 `DcUiScale` scales; `SpacingTokens` is an unscaled duplicate, see COMPONENTS.md F-05), `ShapeTokens` (or the semantic `DcShapes` inside `MaterialTheme`), not raw `.dp`/`RoundedCornerShape(...)` literals.
 
 **Why:** Keeps spacing/shape consistent and greppable.
 

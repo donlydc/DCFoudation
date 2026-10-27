@@ -90,3 +90,10 @@ Explicit intentional/current violations or non-yet-satisfied states of architect
 
 **Owner/exit condition:** Either move the showcase to `app/src/debug` (and keep the catalog reachable only from it), or amend DEC-05 to say "debug-gated at runtime". Natural slots: R4 (design-system registry) or R6.2 (reference app). Status: **Open**.
 
+**Proposed fix (lane C2 `64da185`, not implemented, no restructure done):** move `showcase/trip/*` to `app/src/debug/java/...` and use `debugImplementation` for catalog usage; provide a `src/release` stub (for example `ShowcaseEntries` returning an empty list) that `MainActivity` consults for nav items and routes, removing the runtime `AppEnvironment.DEBUG` branch; verify with a release APK dex inspection. Caveat: `DesignSystemCatalog` lives in `:ui:designsystem` main, so it also needs a `:ui:catalog` split or R8 stripping (`release.optimization.enable` is currently false). Still shipped in release as of HEAD; Status remains **Open**. Final choice (this vs amending DEC-05) is for Opus.
+
+## Resolved defects and notes (not deviations)
+
+- **Missing `android.permission.INTERNET` (fixed by lane C2, `64da185`).** `articles` performs Retrofit I/O but no manifest in the repo declared `INTERNET`, so network refresh could not work on a device. The permission is now declared in `app/src/main/AndroidManifest.xml`. Merged manifest not inspected and the build is NOT_RUN. Recorded here as a fixed defect, not a KD.
+- **Static receiver scopes (lane A3, DEC-A3-2, PROPOSED).** `DcAlarmReceiver`/`DcAlarmRestorer` build plain `CoroutineScope(SupervisorJob() + DefaultDispatcherProvider().default)` instances because receivers have no DI. This does not contradict THR-01 (no `GlobalScope`) or THR-03 (which governs only `AppCoroutineScope`), so no KD number is allocated; Opus may reconsider against INV-06.
+- **KD-04 and KD-05 stay Open.** Lane B2 added tests and redaction/isolation to the logging backends and a test seam for secure storage, but no real credential flow (KD-04) and no analytics/crash vendor (KD-05) exist.

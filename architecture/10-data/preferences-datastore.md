@@ -21,6 +21,10 @@ Consumers: `GreetingPreferencesRepository` stores `nameIndex` under key `greetin
 
 **Verification:** Outside `:data:preferences`, direct `PreferencesDataSource` usage is limited to explicit mapping repositories such as `GreetingPreferencesRepository` and `AppConfigurationRepository`.
 
+## Contract and policy (lane B1 `7a8a804`)
+
+`PreferencesDataSource` now documents the PREF-01 contract: every key carries its default; reads never fail for missing, malformed or unreadable values; writes serialize and survive re-creation over the same store; a write `IOException` propagates. PREF-03: this is unencrypted storage for non-sensitive configuration only; secrets go through `:security` (SEC-02). `PreferencesContractTest` (11 `@Test`, NOT_RUN) covers it.
+
 ## Testing / validation
 
 `GreetingViewModelTest` uses the shared `:testing` `InMemoryPreferencesDataSource` (`MutableStateFlow`-backed) — no real DataStore file I/O in feature unit tests. `DataStorePreferencesDataSourceTest` uses a deterministic in-memory `DataStore` contract double to verify migration ordering, atomic edits, malformed enum fallback and expected `IOException` fallback at the real storage boundary.

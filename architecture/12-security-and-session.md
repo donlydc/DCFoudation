@@ -36,7 +36,7 @@ No login/auth/session/credential flow exists anywhere in the app — see `22-kno
 
 ## Testing / validation
 
-SEC-01's manual review remains the process for every new log call site (see `15-observability/logging.md`). `EncryptedSharedPreferencesSecureStorage` needs a real Android `Context`/Keystore to construct a `MasterKey`, so it is not feasibly unit-testable outside instrumentation — a known gap (same class as the Phase Q worker-execution gap, see `HANDOVER.md`). `security/src/test/.../SecureStorageUnavailableExceptionTest.kt` covers the one Android-independent piece of logic (the ERR-01 exception-wrapping).
+SEC-01's manual review remains the process for every new log call site (see `15-observability/logging.md`). Since lane B2 (`8b6a6fe`) `EncryptedSharedPreferencesSecureStorage` has an `internal` provider seam, so its storage logic (round trip, remove, unavailable/undecryptable reads, write failures) is JVM-testable through `EncryptedSharedPreferencesSecureStorageTest` with a `FakeSharedPreferences` (written, NOT_RUN). The real Keystore/`MasterKey` path is still instrumentation-only (none exist). SEC-01 note: the read path maps both `SecureStorageUnavailableException` and `SecurityException` (undecryptable/invalidated key) to `null`; writes throw. `SecureStorageUnavailableExceptionTest` covers the ERR-01 exception wrapping. `:observability` now applies a heuristic `Redactor` as a SEC-01 safety net (see `15-observability/logging.md`); it does not replace the manual log-call review. D-04 (provider/lifecycle) is PROPOSED in `23-decision-log.md` DEC-B2-1.
 
 ## Related documents
 

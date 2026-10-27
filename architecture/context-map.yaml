@@ -29,24 +29,25 @@ rules:
 
 modules:
   - {id: foundation, gradle_path: ":foundation", kind: jvm, doc: architecture/modules/foundation.md,
-     source_roots: ["foundation/src/main/kotlin"], test_roots: ["foundation/src/test"],
+     source_roots: ["foundation/src/main/kotlin"], test_roots: ["foundation/src/test"],   # A3: AppErrorTest (12)
      entry_symbols: ["AppError", "isRetryable"],
      depends_on: [],
      owners_rules: ["INV-07", "ERR-01"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
   - {id: ui-designsystem, gradle_path: ":ui:designsystem", kind: android-library, doc: architecture/modules/ui-designsystem.md,
      source_roots: ["ui/designsystem/src/main/java", "ui/designsystem/src/main/res"], test_roots: ["ui/designsystem/src/test", "ui/designsystem/src/androidTest"],
      entry_symbols: ["DcTheme", "DcContentState", "DesignSystemCatalog", "DcSpacing", "DcColors"],
+     registry: ui/designsystem/COMPONENTS.md,   # A4 component registry (DRAFT, NOT_RUN)
      depends_on: [],
      owners_rules: ["INV-08", "DS-01", "DS-02", "DS-03"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
   - {id: runtime-concurrency, gradle_path: ":runtime:concurrency", kind: jvm, doc: architecture/modules/runtime-concurrency.md,
      source_roots: ["runtime/concurrency/src/main/kotlin"], test_roots: ["runtime/concurrency/src/test"],
-     entry_symbols: ["DispatcherProvider", "DefaultDispatcherProvider", "SingleFlight", "JobRegistry", "AppCoroutineScope", "RetryPolicy"],
+     entry_symbols: ["DispatcherProvider", "DefaultDispatcherProvider", "SingleFlight", "JobRegistry", "AppCoroutineScope", "RetryPolicy"],   # A3: 64 tests incl. *ContractTest/*LifecycleTest, VirtualTimeScope helper
      depends_on: [],
      owners_rules: ["THR-01", "THR-02", "INV-05", "INV-06"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
   - {id: runtime-scheduling, gradle_path: ":runtime:scheduling", kind: android-library, doc: architecture/modules/runtime-scheduling.md,
      source_roots: ["runtime/scheduling/src/main/java"], test_roots: ["runtime/scheduling/src/test"],
      entry_symbols: ["DcScheduler", "AndroidDcScheduler", "DcWorkScheduler", "DcWorker", "DcJobSpec", "DcScheduleOutcome", "DcJobState", "DcAlarmReceiver"],
-     depends_on: [":foundation", ":runtime:concurrency"],
+     depends_on: [":foundation", ":runtime:concurrency"],   # :foundation is api(...) since A3 bb5ce19; :runtime:concurrency is implementation
      owners_rules: ["BG-01", "BG-02"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
   - {id: data-preferences, gradle_path: ":data:preferences", kind: android-library, doc: architecture/modules/data-preferences.md,
      source_roots: ["data/preferences/src/main/java"], test_roots: ["data/preferences/src/test"],
@@ -61,16 +62,16 @@ modules:
   - {id: data-network, gradle_path: ":data:network", kind: android-library, doc: architecture/modules/data-network.md,
      source_roots: ["data/network/src/main/java"], test_roots: ["data/network/src/test"],
      entry_symbols: ["NetworkClientFactory", "NetworkClientConfig", "NetworkResult", "safeApiCall", "HttpErrorBodyParser", "NoOpHttpErrorBodyParser"],
-     depends_on: [":foundation", ":observability"],
+     depends_on: [":foundation"],
      owners_rules: ["DAT-NET-01", "ERR-01", "SEC-01"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
   - {id: platform-navigation, gradle_path: ":platform:navigation", kind: android-library, doc: architecture/modules/platform-navigation.md,
      source_roots: ["platform/navigation/src/main/java"], test_roots: ["platform/navigation/src/test"],
-     entry_symbols: ["Destination"],
+     entry_symbols: ["Destination", "NavigationEffect", "DestinationRoutes"],
      depends_on: [],
      owners_rules: ["NAV-01"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
   - {id: platform-permission, gradle_path: ":platform:permission", kind: android-library, doc: architecture/modules/platform-permission.md,
      source_roots: ["platform/permission/src/main/java"], test_roots: ["platform/permission/src/test"],
-     entry_symbols: ["PermissionState", "NotificationPermission"],
+     entry_symbols: ["PermissionState", "NotificationPermission", "PermissionStatus", "PermissionRequester"],
      depends_on: [],
      owners_rules: ["PERM-01"], doc_status: DRAFT, test_status: NOT_RUN, evidence: reports/baseline-verification.md}
   - {id: security, gradle_path: ":security", kind: android-library, doc: architecture/modules/security.md,
