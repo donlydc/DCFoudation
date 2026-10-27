@@ -6,7 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
-/** Reads are a cold [Flow], writes are `suspend` — same read/write shape as `PreferencesDataSource`. */
+/** SAMPLE (D-01 open, not generic). Reads are a cold [Flow], writes are `suspend` — same read/write shape as `PreferencesDataSource`. */
 @Dao
 interface ArticleDao {
 
