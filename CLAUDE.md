@@ -130,7 +130,7 @@ If the repository contains `architecture/`, those documents are more specific th
 
 ---
 
-## 3a. CodeGraph first (code lookup)
+## 3a. CodeGraph first (code lookup) — MANDATORY every session (see `SKILLS.md`)
 
 This repository is indexed by CodeGraph (`.codegraph/`, local-only and git-ignored). For **any** question about code — where something is, how it works, what a change affects — use CodeGraph **before** `Grep`, `Glob`, `find`, or opening files:
 
