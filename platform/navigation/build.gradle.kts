@@ -1,5 +1,6 @@
 plugins {
     id("dc.android.library")
+    id("dc.testing")
     alias(libs.plugins.kotlin.serialization)
 }
 

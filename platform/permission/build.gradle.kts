@@ -1,6 +1,7 @@
 plugins {
     id("dc.android.library")
     id("dc.compose")
+    id("dc.testing")
 }
 
 android {
